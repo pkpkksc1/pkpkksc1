@@ -1,0 +1,569 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>중국어 단어장 카드</title>
+  <style>
+    :root{
+      --bg:#f3f4f6;
+      --card:#ffffff;
+      --text:#111827;
+      --muted:#6b7280;
+      --shadow: 0 12px 32px rgba(0,0,0,.12);
+      --radius: 26px;
+
+      --accent:#ef4444;
+
+      --btn:#111827;
+      --btnText:#ffffff;
+      --btn2:#e5e7eb;
+      --btn2Text:#111827;
+      --danger:#ef4444;
+    }
+    *{ box-sizing:border-box; }
+    body{
+      margin:0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, "Noto Sans KR", "Apple SD Gothic Neo", sans-serif;
+      background:var(--bg);
+      color:var(--text);
+      min-height:100vh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:24px;
+    }
+    .app{ width:min(1040px, 100%); display:grid; gap:16px; }
+    .topbar{
+      display:flex; align-items:flex-start; justify-content:space-between;
+      gap:12px; flex-wrap:wrap;
+    }
+    .title{ font-size:18px; font-weight:900; }
+    .meta{ color:var(--muted); font-size:13px; }
+
+    .rightBox{
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+      align-items:flex-end;
+      min-width: 260px;
+    }
+
+    .controls{
+      display:flex; gap:10px; justify-content:center; flex-wrap:wrap;
+    }
+    button{
+      border:0; border-radius:14px;
+      padding:10px 14px;
+      font-weight:900;
+      cursor:pointer;
+      user-select:none;
+    }
+    .primary{ background:var(--btn); color:var(--btnText); }
+    .secondary{ background:var(--btn2); color:var(--btn2Text); }
+    .danger{ background:var(--danger); color:white; }
+    .small{ padding:9px 12px; border-radius:12px; font-weight:900; }
+
+    .ttsBar{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      justify-content:flex-end;
+      flex-wrap:wrap;
+      color:var(--muted);
+      font-size:12px;
+      font-weight:800;
+    }
+    .ttsBar input[type="range"]{
+      width:140px;
+      accent-color: var(--accent);
+    }
+    .pillMini{
+      background:#fff;
+      border:1px solid rgba(0,0,0,.08);
+      border-radius:999px;
+      padding:6px 10px;
+      box-shadow: 0 6px 18px rgba(0,0,0,.06);
+    }
+
+    .card{
+      background:var(--card);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      padding:34px;
+      display:grid;
+      gap:18px;
+      position:relative;
+      overflow:hidden;
+    }
+    .posLine{
+      text-align:center;
+      color:var(--muted);
+      font-size:13px;
+      font-weight:800;
+      margin-top:-6px;
+    }
+    .hanzi{
+      font-size:92px;
+      line-height:1;
+      text-align:center;
+      font-weight:900;
+      letter-spacing:1px;
+      padding:6px 10px;
+    }
+
+    .row{
+      display:flex;
+      gap:12px;
+      justify-content:center;
+      align-items:stretch;
+      flex-wrap:wrap;
+      padding-top:4px;
+    }
+
+    /* 빨간 박스 */
+    .pill{
+      border-radius:16px;
+      padding:12px 16px;
+      background:#fff;
+      border:2px solid var(--accent);
+      min-width: 240px;
+      max-width: 100%;
+    }
+    .label{
+      font-size:12px;
+      color:var(--muted);
+      margin-bottom:4px;
+      font-weight:900;
+      letter-spacing:.2px;
+    }
+
+    /* 병음: 기울임 제거 + 깔끔 */
+    .pinyin{
+      font-style: normal;
+      color: var(--muted);
+      font-size: 18px;
+      font-weight: 800;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, "Noto Sans KR", "Apple SD Gothic Neo", sans-serif;
+      letter-spacing: .2px;
+    }
+    .korean{ font-size:18px; font-weight:900; }
+
+    .hiddenText{
+      filter: blur(9px);
+      user-select:none;
+    }
+
+    .panel{
+      background:rgba(255,255,255,.70);
+      border:1px solid rgba(0,0,0,.06);
+      border-radius:18px;
+      padding:14px;
+      box-shadow: 0 8px 24px rgba(0,0,0,.06);
+    }
+    textarea{
+      width:100%;
+      min-height:170px;
+      border-radius:14px;
+      border:1px solid #e5e7eb;
+      padding:12px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      font-size:13px;
+      resize:vertical;
+      outline:none;
+      background:white;
+    }
+    .panelRow{
+      display:flex; gap:10px; flex-wrap:wrap;
+      align-items:center; justify-content:space-between;
+      margin-bottom:10px;
+    }
+    .hint{
+      color:var(--muted);
+      font-size:13px;
+      margin-top:8px;
+      line-height:1.5;
+    }
+    .kbd{
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      background:#111827;
+      color:white;
+      border-radius:8px;
+      padding:2px 7px;
+      font-size:12px;
+    }
+    .footerHint{ text-align:center; color:var(--muted); font-size:12px; }
+
+    @media (max-width:720px){
+      .rightBox{ align-items:flex-start; min-width:unset; width:100%; }
+      .ttsBar{ justify-content:flex-start; }
+    }
+    @media (max-width:560px){
+      .hanzi{ font-size:76px; }
+      .pill{ min-width: 100%; }
+      .ttsBar input[type="range"]{ width: 180px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="topbar">
+      <div>
+        <div class="title">중국어 단어장 카드</div>
+        <div class="meta" id="meta"></div>
+      </div>
+
+      <div class="rightBox">
+        <div class="controls">
+          <button class="secondary small" id="toggleHide">뜻 가리기</button>
+          <button class="secondary small" id="speak">🔊 듣기</button>
+          <button class="secondary small" id="random">랜덤</button>
+          <button class="secondary small" id="prev">이전</button>
+          <button class="primary small" id="next">다음</button>
+        </div>
+
+        <div class="ttsBar">
+          <span class="pillMini">속도</span>
+          <input type="range" id="rate" min="0.6" max="1.2" step="0.05" value="0.9" />
+          <span class="pillMini" id="rateLabel">0.90×</span>
+          <span class="pillMini" id="voiceLabel">voice: auto</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" aria-live="polite" id="card">
+      <div class="posLine" id="pos"> </div>
+      <div class="hanzi" id="hanzi">—</div>
+      <div class="row">
+        <div class="pill">
+          <div class="label">병음</div>
+          <div class="pinyin" id="pinyin">—</div>
+        </div>
+        <div class="pill">
+          <div class="label">한국어</div>
+          <div class="korean" id="korean">—</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panelRow">
+        <div style="font-weight:900;">데이터 붙여넣기</div>
+        <div class="controls">
+          <button class="primary small" id="load">불러오기</button>
+          <button class="secondary small" id="sample">샘플</button>
+          <button class="danger small" id="clear">초기화</button>
+        </div>
+      </div>
+
+      <textarea id="input" placeholder="쉼표(CSV) 또는 원래 공백 형식 그대로 붙여넣어도 돼!
+예)
+地铁,dìtiě,지하철/전철,명사
+挤,jǐ,붐비다,형용사/동사
+
+또는
+地铁 dìtiě 지하철/전철 명사
+太挤了 tài jǐ le 너무 붐빈다 구어표현"></textarea>
+
+      <div class="hint">
+        지원 형식<br/>
+        1) <b>한자,병음,한국어,품사(선택)</b> (쉼표 구분)<br/>
+        2) <b>한자 병음 한국어 품사</b> (공백 구분, 병음/한국어는 여러 단어여도 OK)<br/>
+        단축키:
+        <span class="kbd">←</span> 이전 /
+        <span class="kbd">→</span> 다음 /
+        <span class="kbd">R</span> 랜덤 /
+        <span class="kbd">H</span> 뜻 가리기 /
+        <span class="kbd">S</span> 듣기
+      </div>
+    </div>
+
+    <div class="footerHint">※ 데이터/입력칸/설정은 이 브라우저에 자동 저장돼. (localStorage)</div>
+  </div>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+
+  const STORAGE_KEY = "vocab_cards_v1";
+  const INPUT_KEY   = "vocab_cards_input_v1";
+  const TTS_KEY     = "vocab_cards_tts_v1";
+
+  let cards = [];
+  let idx = 0;
+  let hideMeaning = false;
+
+  // TTS state
+  let ttsRate = 0.9;
+  let chosenVoiceName = "auto"; // 'auto' or actual voice.name
+
+  function parseLines(text) {
+    const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+    const parsed = [];
+
+    for (const line of lines) {
+      // 1) 쉼표(CSV)
+      if (line.includes(",")) {
+        const parts = line.split(",").map(s => s.trim());
+        if (parts.length < 3) continue;
+        const [hanzi, pinyin, korean, pos] = parts;
+        parsed.push({ hanzi, pinyin, korean, pos: pos || "" });
+        continue;
+      }
+
+      // 2) 공백 패턴: "한자 병음(여러토큰 가능) 한국어(여러토큰 가능) 품사"
+      const tokens = line.split(/\s+/);
+      if (tokens.length < 4) continue;
+
+      const hanzi = tokens[0];
+      const pos = tokens[tokens.length - 1];
+
+      let firstKoIdx = -1;
+      for (let i = 1; i < tokens.length - 1; i++) {
+        if (/[가-힣]/.test(tokens[i])) { firstKoIdx = i; break; }
+      }
+      if (firstKoIdx === -1) continue;
+
+      const pinyin = tokens.slice(1, firstKoIdx).join(" ");
+      const korean = tokens.slice(firstKoIdx, tokens.length - 1).join(" ");
+
+      parsed.push({ hanzi, pinyin, korean, pos });
+    }
+
+    return parsed;
+  }
+
+  function save() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ cards, idx, hideMeaning }));
+    localStorage.setItem(INPUT_KEY, $("input").value);
+    localStorage.setItem(TTS_KEY, JSON.stringify({ ttsRate, chosenVoiceName }));
+  }
+
+  function loadSaved() {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      try{
+        const obj = JSON.parse(raw);
+        if (Array.isArray(obj.cards)) cards = obj.cards;
+        if (Number.isFinite(obj.idx)) idx = obj.idx;
+        if (typeof obj.hideMeaning === "boolean") hideMeaning = obj.hideMeaning;
+      }catch(e){}
+    }
+
+    const savedText = localStorage.getItem(INPUT_KEY);
+    if (savedText !== null) $("input").value = savedText;
+
+    const savedTTS = localStorage.getItem(TTS_KEY);
+    if (savedTTS) {
+      try{
+        const t = JSON.parse(savedTTS);
+        if (typeof t.ttsRate === "number") ttsRate = t.ttsRate;
+        if (typeof t.chosenVoiceName === "string") chosenVoiceName = t.chosenVoiceName;
+      }catch(e){}
+    }
+  }
+
+  function clampIndex() {
+    if (cards.length === 0) { idx = 0; return; }
+    if (idx < 0) idx = 0;
+    if (idx >= cards.length) idx = cards.length - 1;
+  }
+
+  function render() {
+    clampIndex();
+
+    if (cards.length === 0) {
+      $("hanzi").textContent = "데이터 없음";
+      $("pinyin").textContent = "—";
+      $("korean").textContent = "—";
+      $("pos").textContent = "";
+      $("meta").textContent = "아래에 데이터를 붙여넣고 ‘불러오기’ 눌러줘!";
+      return;
+    }
+
+    const c = cards[idx];
+    $("hanzi").textContent = c.hanzi || "—";
+    $("pinyin").textContent = c.pinyin || "—";
+    $("pos").textContent = c.pos ? c.pos : "";
+
+    const ko = $("korean");
+    ko.textContent = c.korean || "—";
+    ko.classList.toggle("hiddenText", hideMeaning);
+
+    $("meta").textContent = `${idx + 1} / ${cards.length}` + (c.pos ? ` · ${c.pos}` : "");
+  }
+
+  function next() {
+    if (cards.length === 0) return;
+    idx = (idx + 1) % cards.length;
+    render(); save();
+  }
+  function prev() {
+    if (cards.length === 0) return;
+    idx = (idx - 1 + cards.length) % cards.length;
+    render(); save();
+  }
+  function randomPick() {
+    if (cards.length === 0) return;
+    if (cards.length === 1) { idx = 0; render(); save(); return; }
+    let r;
+    do { r = Math.floor(Math.random() * cards.length); } while (r === idx);
+    idx = r;
+    render(); save();
+  }
+
+  // ---------- TTS ----------
+  function getPreferredVoice() {
+    if (!("speechSynthesis" in window)) return null;
+
+    const voices = window.speechSynthesis.getVoices() || [];
+    if (voices.length === 0) return null;
+
+    if (chosenVoiceName && chosenVoiceName !== "auto") {
+      const exact = voices.find(v => v.name === chosenVoiceName);
+      if (exact) return exact;
+    }
+
+    // auto: pick zh voice if possible
+    const zh = voices.find(v =>
+      (v.lang && v.lang.toLowerCase().startsWith("zh")) ||
+      (v.name && /chinese|mandarin|zh/i.test(v.name))
+    );
+    return zh || voices[0];
+  }
+
+  function refreshVoiceLabel() {
+    const v = getPreferredVoice();
+    $("voiceLabel").textContent = v ? `voice: ${v.lang || "?"}` : "voice: loading...";
+  }
+
+  function speakChinese(text) {
+    if (!("speechSynthesis" in window)) {
+      alert("이 브라우저는 음성 기능을 지원하지 않아 ㅠㅠ");
+      return;
+    }
+    if (!text || text === "—" || text === "데이터 없음") return;
+
+    // stop any ongoing speech
+    window.speechSynthesis.cancel();
+
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = "zh-CN";
+    u.rate = ttsRate;
+    u.pitch = 1.0;
+
+    const v = getPreferredVoice();
+    if (v) u.voice = v;
+
+    window.speechSynthesis.speak(u);
+  }
+
+  function speakCurrent() {
+    if (cards.length === 0) return;
+    // 한자 읽기
+    speakChinese(cards[idx].hanzi);
+  }
+  // ---------- /TTS ----------
+
+  // UI events
+  $("next").addEventListener("click", next);
+  $("prev").addEventListener("click", prev);
+  $("random").addEventListener("click", randomPick);
+
+  $("toggleHide").addEventListener("click", () => {
+    hideMeaning = !hideMeaning;
+    $("toggleHide").textContent = hideMeaning ? "뜻 보이기" : "뜻 가리기";
+    render(); save();
+  });
+
+  $("speak").addEventListener("click", () => {
+    speakCurrent();
+  });
+
+  // rate slider
+  const rateEl = $("rate");
+  const rateLabel = $("rateLabel");
+  function setRate(val) {
+    ttsRate = Number(val);
+    rateEl.value = String(ttsRate);
+    rateLabel.textContent = `${ttsRate.toFixed(2)}×`;
+    save();
+  }
+  rateEl.addEventListener("input", (e) => setRate(e.target.value));
+
+  // click card to speak (app 느낌)
+  $("card").addEventListener("click", () => {
+    speakCurrent();
+  });
+
+  $("load").addEventListener("click", () => {
+    const text = $("input").value.trim();
+    const parsed = parseLines(text);
+    if (parsed.length === 0) {
+      alert("형식이 안 맞아! 최소 (한자,병음,한국어) 또는 (한자 병음 한국어 품사) 형태여야 해.");
+      return;
+    }
+    cards = parsed;
+    idx = 0;
+    render();
+    save();
+  });
+
+  $("sample").addEventListener("click", () => {
+    $("input").value =
+`地铁,dìtiě,지하철/전철,명사
+挤,jǐ,붐비다,형용사/동사
+太挤了,tài jǐ le,너무 붐빈다,구어표현
+
+早上 zǎoshang 아침 명사
+坐 zuò 타다(교통수단) 동사`;
+    save();
+  });
+
+  $("clear").addEventListener("click", () => {
+    if (!confirm("저장된 데이터/입력칸/설정도 같이 지울까?")) return;
+    cards = []; idx = 0; hideMeaning = false;
+    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(INPUT_KEY);
+    localStorage.removeItem(TTS_KEY);
+    $("input").value = "";
+    $("toggleHide").textContent = "뜻 가리기";
+    setRate(0.9);
+    chosenVoiceName = "auto";
+    render();
+    refreshVoiceLabel();
+  });
+
+  // input autosave
+  $("input").addEventListener("input", () => {
+    localStorage.setItem(INPUT_KEY, $("input").value);
+  });
+
+  // keyboard shortcuts
+  window.addEventListener("keydown", (e) => {
+    if (e.target && (e.target.tagName === "TEXTAREA" || e.target.tagName === "INPUT")) return;
+    if (e.key === "ArrowRight") next();
+    if (e.key === "ArrowLeft") prev();
+    if (e.key.toLowerCase() === "r") randomPick();
+    if (e.key.toLowerCase() === "h") $("toggleHide").click();
+    if (e.key.toLowerCase() === "s") speakCurrent();
+  });
+
+  // voices load stabilization
+  if ("speechSynthesis" in window) {
+    window.speechSynthesis.onvoiceschanged = () => {
+      refreshVoiceLabel();
+    };
+  }
+
+  // init
+  loadSaved();
+  $("toggleHide").textContent = hideMeaning ? "뜻 보이기" : "뜻 가리기";
+  setRate(ttsRate);
+  render();
+
+  // try refresh label after a short delay too
+  setTimeout(refreshVoiceLabel, 250);
+  setTimeout(refreshVoiceLabel, 1000);
+</script>
+</body>
+</html>
