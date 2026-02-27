@@ -121,7 +121,6 @@
       padding-top:4px;
     }
 
-    /* 빨간 박스 */
     .pill{
       border-radius:16px;
       padding:12px 16px;
@@ -138,7 +137,6 @@
       letter-spacing:.2px;
     }
 
-    /* 병음: 기울임 제거 + 깔끔 */
     .pinyin{
       font-style: normal;
       color: var(--muted);
@@ -259,16 +257,12 @@
       <textarea id="input" placeholder="쉼표(CSV) 또는 원래 공백 형식 그대로 붙여넣어도 돼!
 예)
 地铁,dìtiě,지하철/전철,명사
-挤,jǐ,붐비다,형용사/동사
-
-또는
-地铁 dìtiě 지하철/전철 명사
-太挤了 tài jǐ le 너무 붐빈다 구어표현"></textarea>
+挤,jǐ,붐비다,형용사/동사"></textarea>
 
       <div class="hint">
         지원 형식<br/>
         1) <b>한자,병음,한국어,품사(선택)</b> (쉼표 구분)<br/>
-        2) <b>한자 병음 한국어 품사</b> (공백 구분, 병음/한국어는 여러 단어여도 OK)<br/>
+        2) <b>한자 병음 한국어 품사</b> (공백 구분)<br/>
         단축키:
         <span class="kbd">←</span> 이전 /
         <span class="kbd">→</span> 다음 /
@@ -288,20 +282,21 @@
   const INPUT_KEY   = "vocab_cards_input_v1";
   const TTS_KEY     = "vocab_cards_tts_v1";
 
+  // ✅ 여기 파일 이름만 맞으면 자동으로 불러와짐
+  const DEFAULT_CSV_FILE = "vocab.csv";
+
   let cards = [];
   let idx = 0;
   let hideMeaning = false;
 
-  // TTS state
   let ttsRate = 0.9;
-  let chosenVoiceName = "auto"; // 'auto' or actual voice.name
+  let chosenVoiceName = "auto";
 
   function parseLines(text) {
     const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
     const parsed = [];
 
     for (const line of lines) {
-      // 1) 쉼표(CSV)
       if (line.includes(",")) {
         const parts = line.split(",").map(s => s.trim());
         if (parts.length < 3) continue;
@@ -310,7 +305,6 @@
         continue;
       }
 
-      // 2) 공백 패턴: "한자 병음(여러토큰 가능) 한국어(여러토큰 가능) 품사"
       const tokens = line.split(/\s+/);
       if (tokens.length < 4) continue;
 
@@ -376,7 +370,7 @@
       $("pinyin").textContent = "—";
       $("korean").textContent = "—";
       $("pos").textContent = "";
-      $("meta").textContent = "아래에 데이터를 붙여넣고 ‘불러오기’ 눌러줘!";
+      $("meta").textContent = "자동 로드 중이거나, 아래에 데이터를 붙여넣고 ‘불러오기’ 눌러줘!";
       return;
     }
 
@@ -411,7 +405,6 @@
     render(); save();
   }
 
-  // ---------- TTS ----------
   function getPreferredVoice() {
     if (!("speechSynthesis" in window)) return null;
 
@@ -423,7 +416,6 @@
       if (exact) return exact;
     }
 
-    // auto: pick zh voice if possible
     const zh = voices.find(v =>
       (v.lang && v.lang.toLowerCase().startsWith("zh")) ||
       (v.name && /chinese|mandarin|zh/i.test(v.name))
@@ -443,7 +435,6 @@
     }
     if (!text || text === "—" || text === "데이터 없음") return;
 
-    // stop any ongoing speech
     window.speechSynthesis.cancel();
 
     const u = new SpeechSynthesisUtterance(text);
@@ -459,10 +450,54 @@
 
   function speakCurrent() {
     if (cards.length === 0) return;
-    // 한자 읽기
     speakChinese(cards[idx].hanzi);
   }
-  // ---------- /TTS ----------
+
+  // ✅ 자동 로드: 저장된 카드가 없으면 vocab.csv를 읽어와서 자동 불러오기
+  async function autoLoadDefaultIfNeeded() {
+    const hasSavedCards = Array.isArray(cards) && cards.length > 0;
+    const hasInputText = ($("input").value || "").trim().length > 0;
+
+    if (hasSavedCards) return; // 이미 저장된 카드가 있으면 건드리지 않음
+
+    // 입력칸이 비어있거나(처음) + 저장된 카드가 없으면 파일에서 불러오기 시도
+    if (!hasInputText) {
+      try{
+        const res = await fetch(`${DEFAULT_CSV_FILE}?v=${Date.now()}`);
+        if (!res.ok) throw new Error("fetch failed");
+        const text = await res.text();
+
+        $("input").value = text;
+        localStorage.setItem(INPUT_KEY, text);
+
+        const parsed = parseLines(text);
+        if (parsed.length > 0) {
+          cards = parsed;
+          idx = 0;
+          render();
+          save();
+        } else {
+          render();
+          console.warn("vocab.csv 파싱 결과가 0개야. 형식 확인 필요.");
+        }
+      }catch(e){
+        // 파일이 없거나 경로가 다르면 여기로 옴
+        render();
+        console.warn("기본 데이터 자동 로드 실패:", e);
+      }
+    } else {
+      // 입력칸은 있는데(사용자가 넣어둠) 카드 저장이 없는 경우: 입력칸 기반 자동 로드
+      const parsed = parseLines($("input").value.trim());
+      if (parsed.length > 0) {
+        cards = parsed;
+        idx = 0;
+        render();
+        save();
+      } else {
+        render();
+      }
+    }
+  }
 
   // UI events
   $("next").addEventListener("click", next);
@@ -479,7 +514,6 @@
     speakCurrent();
   });
 
-  // rate slider
   const rateEl = $("rate");
   const rateLabel = $("rateLabel");
   function setRate(val) {
@@ -490,7 +524,6 @@
   }
   rateEl.addEventListener("input", (e) => setRate(e.target.value));
 
-  // click card to speak (app 느낌)
   $("card").addEventListener("click", () => {
     speakCurrent();
   });
@@ -516,7 +549,7 @@
 
 早上 zǎoshang 아침 명사
 坐 zuò 타다(교통수단) 동사`;
-    save();
+    localStorage.setItem(INPUT_KEY, $("input").value);
   });
 
   $("clear").addEventListener("click", () => {
@@ -531,14 +564,14 @@
     chosenVoiceName = "auto";
     render();
     refreshVoiceLabel();
+    // 초기화 후 다시 자동 로드 시도
+    autoLoadDefaultIfNeeded();
   });
 
-  // input autosave
   $("input").addEventListener("input", () => {
     localStorage.setItem(INPUT_KEY, $("input").value);
   });
 
-  // keyboard shortcuts
   window.addEventListener("keydown", (e) => {
     if (e.target && (e.target.tagName === "TEXTAREA" || e.target.tagName === "INPUT")) return;
     if (e.key === "ArrowRight") next();
@@ -548,7 +581,6 @@
     if (e.key.toLowerCase() === "s") speakCurrent();
   });
 
-  // voices load stabilization
   if ("speechSynthesis" in window) {
     window.speechSynthesis.onvoiceschanged = () => {
       refreshVoiceLabel();
@@ -561,810 +593,11 @@
   setRate(ttsRate);
   render();
 
-  // try refresh label after a short delay too
   setTimeout(refreshVoiceLabel, 250);
   setTimeout(refreshVoiceLabel, 1000);
+
+  // ✅ 여기서 자동 로드 실행
+  autoLoadDefaultIfNeeded();
 </script>
 </body>
-
 </html>
-
-// ✅ 기본 단어(처음 접속해도 바로 뜨게 하는 데이터)
-const DEFAULT_DATA = `复习,Fùxí,복습하다,동사
-作业,Zuòyè,숙제,명사
-写作,Xiězuò,글쓰기,명사
-写作的作业,Xiězuò de zuòyè,글쓰기 숙제,명사구
-班长,Bānzhǎng,반장,명사
-告诉,Gàosu,알려주다,동사
-已经,Yǐjīng,이미,부사
-推卸责任,Tuīxiè zérèn,책임을 떠넘기다,동사구
-想起来,Xiǎngqǐlái,생각이 나다,동사
-继续,Jìxù,계속하다,동사
-有时间,Yǒu shíjiān,시간이 있으면,표현
-辛苦了,Xīnkǔ le,수고했어요,표현
-谢谢,Xièxie,감사합니다,표현
-管理,Guǎnlǐ,관리/관리하다,명사/동사
-管理风格,Guǎnlǐ fēnggé,관리 스타일,명사
-处理方法,Chǔlǐ fāngfǎ,처리 방법,명사
-方式,Fāngshì,방식,명사
-日报,Rìbào,일일보고,명사
-日报告,Rì bàogào,매일 보고하다,동사구
-报告,Bàogào,보고하다/보고서,동사/명사
-工作进展,Gōngzuò jìnzhǎn,업무 진행 상황,명사
-进展,Jìnzhǎn,진전/진척,명사
-进行,Jìnxíng,진행하다,동사
-发展,Fāzhǎn,발전하다,동사
-检查,Jiǎnchá,점검하다,동사
-确认,Quèrèn,확인하다,동사
-一次,Yí cì,한 번,수량사
-四个小时,Sì gè xiǎoshí,4시간,수량사구
-组长,Zǔzhǎng,조장/팀장,명사
-小组长,Xiǎozǔzhǎng,소조장/소팀장,명사
-照顾,Zhàogù,돌보다/챙기다,동사
-盯着,Dīngzhe,주시하다/바짝 관리하다,동사
-混日子,Hùn rìzi,시간만 때우다,동사구
-劳动法,Láodòngfǎ,노동법,명사
-升职,Shēngzhí,승진하다,동사
-缺点,Quēdiǎn,단점,명사
-努力,Nǔlì,열심히 하다/노력,동사/명사
-功能,Gōngnéng,기능,명사
-各项,Gè xiàng,각 항목의,수식표현
-质量,Zhìliàng,품질,명사
-价格,Jiàgé,가격,명사
-高,Gāo,높다/비싸다,형용사
-改正,Gǎizhèng,고치다/바로잡다,동사
-改进,Gǎijìn,개선하다,동사
-拖延,Tuōyán,미루다/지연하다,동사
-地方,Dìfang,부분/곳,명사
-做事,Zuòshì,일을 하다,동사
-打扫,Dǎsǎo,청소하다,동사
-厕所,Cèsuǒ,화장실,명사
-房间,Fángjiān,방,명사
-每周,Měi zhōu,매주,부사구
-上班,Shàngbān,출근하다/근무하다,동사
-下班,Xiàbān,퇴근하다,동사
-到点,Dào diǎn,시간이 되다,표현
-马上,Mǎshàng,바로/즉시,부사
-剩,Shèng,남다,동사
-分钟,Fēnzhōng,분,명사
-几,Jǐ,몇,의문사
-参加,Cānjiā,참가하다/참석하다,동사
-婚礼,Hūnlǐ,결혼식,명사
-会议,Huìyì,회의,명사
-宴席,Yànxí,연회,명사
-接风宴,Jiēfēngyàn,환영 연회,명사
-唠叨,Láodao,잔소리하다,동사
-管,Guǎn,관리하다/간섭하다,동사
-压力,Yālì,스트레스/압력,명사
-不用,Bú yòng,~할 필요 없다,조동사구
-本来,Běnlái,원래,부사
-反正,Fǎnzhèng,어쨌든,부사
-享受,Xiǎngshòu,즐기다,동사
-难,Nán,어렵다,형용사
-准时,Zhǔnshí,제시간이다,형용사
-下面,Xiàmian,아래,방위사
-副总,Fùzǒng,부사장,명사
-行政副总,Xíngzhèng fùzǒng,행정부사장,명사
-技术总监,Jìshù zǒngjiān,기술총감,명사
-生产副总,Shēngchǎn fùzǒng,생산부사장,명사
-销售副总,Xiāoshòu fùzǒng,영업부사장,명사
-负责,Fùzé,담당하다,동사
-人力资源部,Rénlì zīyuán bù,인사부,명사
-企划部,Qǐhuà bù,기획부,명사
-财务部,Cáiwù bù,재무부,명사
-总务部,Zǒngwù bù,총무부,명사
-市场部,Shìchǎng bù,시장부,명사
-销售部,Xiāoshòu bù,영업부,명사
-派来,Pài lái,파견해 오다,동사구
-派驻,Pàizhù,파견하다,동사
-驻线员,Zhùxiànyuán,주재원,명사
-分别,Fēnbié,각각,부사
-产品开发,Chǎnpǐn kāifā,제품 개발,명사
-生产,Shēngchǎn,생산,명사/동사
-性格,Xìnggé,성격,명사
-相反,Xiāngfǎn,반대다/반대,형용사/명사
-外向,Wàixiàng,외향적,형용사
-内向,Nèixiàng,내향적,형용사
-比较,Bǐjiào,비교적/좀,부사
-变成,Biànchéng,~로 변하다,동사
-能干,Nénggàn,유능하다,형용사
-一边…一边…,Yìbiān… yìbiān…,~하면서 ~하다,문형
-照看,Zhàokàn,돌보다,동사
-孩子,Háizi,아이,명사
-通宵,Tōngxiāo,밤새다,동사/명사
-股票市场,Gǔpiào shìchǎng,주식시장,명사
-牛市,Niúshì,상승장,명사
-熊市,Xióngshì,하락장,명사
-词典,Cídiǎn,사전,명사
-查出来,Chá chūlái,찾아내다,동사구
-省略,Shěnglüè,생략하다,동사
-一般,Yìbān,일반적으로/보통,부사
-说话,Shuōhuà,말하다,동사
-可以,Kěyǐ,~할 수 있다/해도 된다,조동사
-了解,Liǎojiě,이해하다/알다,동사
-聊天,Liáotiān,대화하다,동사
-介绍,Jièshào,소개하다,동사
-中性,Zhōngxìng,중립적인,형용사
-迷,Mí,~팬/덕후,접미/명사
-球迷,Qiúmí,스포츠 팬,명사
-足球迷,Zúqiúmí,축구팬,명사
-歌迷,Gēmí,가수 팬,명사
-影迷,Yǐngmí,영화 팬,명사
-狂,Kuáng,~광,접미/명사
-工作狂,Gōngzuòkuáng,일중독,명사
-表面上,Biǎomiàn shang,겉으로는,부사
-其实,Qíshí,사실은,부사
-冷淡,Lěngdàn,냉담하다,형용사
-接触,Jiēchù,접촉하다,동사
-打交道,Dǎ jiāodào,교류하다/상대하다,동사
-年纪,Niánjì,나이,명사
-年龄,Niánlíng,연령,명사
-岁,Suì,살,양사
-多元化,Duōyuánhuà,다원화,명사/형용사
-社会,Shèhuì,사회,명사
-选择,Xuǎnzé,선택(하다),명사/동사
-一…就…,Yì… jiù…,~하자마자 바로…,문형
-停不下来,Tíng bu xiàlái,멈출 수 없다,표현
-停不了,Tíng bu liǎo,멈출 수 없다,표현
-被,Bèi,~당하다,개사
-别说…了,Bié shuō…le,~은 말할 것도 없다,관용표현
-霸凌,Bàlíng,괴롭힘,명사
-校园霸凌,Xiàoyuán bàlíng,학교폭력,명사
-欺负,Qīfu,괴롭히다,동사
-都,Dōu,모두,부사
-跟踪,Gēnzōng,추적하다,동사
-跟着,Gēnzhe,따라가다,동사
-前面,Qiánmiàn,앞,방위사
-后面,Hòumiàn,뒤,방위사
-足,Zú,발,명사
-脚,Jiǎo,발,명사
-轻重缓急,Qīngzhòng huǎnjí,중요도·긴급도,명사
-轻重,Qīngzhòng,경중,명사
-缓急,Huǎnjí,완급,명사
-分不清,Fēn bù qīng,구분하지 못하다,동사구
-双胞胎,Shuāngbāotāi,쌍둥이,명사
-老大,Lǎodà,첫째,명사
-老二,Lǎoèr,둘째,명사
-哥哥,Gēge,형/오빠,명사
-弟弟,Dìdi,남동생,명사
-倦怠,Juàndài,번아웃/권태,명사
-职业倦怠,Zhíyè juàndài,직무 번아웃,명사
-现场专家,Xiànchǎng zhuānjiā,현장 전문가,명사
-目标,Mùbiāo,목표,명사
-中文教育,Zhōngwén jiàoyù,중국어 교육,명사
-现场检查,Xiànchǎng jiǎnchá,현장 점검,명사
-驻在员,Zhùzàiyuán,주재원,명사
-名胜景点,Míngshèng jǐngdiǎn,명승지,명사
-沟通,Gōutōng,소통하다,동사
-物流,Wùliú,물류,명사
-改进点,Gǎijìndiǎn,개선점,명사
-推动解决,Tuīdòng jiějué,해결을 추진하다,동사구
-总部,Zǒngbù,본사,명사
-当地法人,Dāngdì fǎrén,현지 법인,명사
-桥梁作用,Qiáoliáng zuòyòng,가교 역할,명사
-贡献,Gòngxiàn,기여하다/기여,동사/명사
-羡慕,xiànmù,부러워하다,동사
-富翁,fùwēng,큰부자,명사
-有钱人,yǒuqiánrén,부자,명사
-别人,biérén,다른 사람,대명사
-敢,gǎn,감히 ~하다,동사
-不敢,bù gǎn,감히 ~하지 못하다,동사
-为什么,wèishénme,왜,의문사
-很,hěn,매우,부사
-不是,bú shì,아니다,동사
-吗,ma,~니?,의문조사
-或者,huòzhě,또는,접속사
-不,bù,~않다,부사
-有,yǒu,있다,동사
-人,rén,사람,명사
-网约车,wǎngyuēchē,앱 호출 차량 서비스,명사
-专车,zhuānchē,전용차,명사
-曹操专车,Cáocāo zhuānchē,차오차오 전용차,명사
-滴滴,Dīdī,디디(호출 서비스),명사
-高德地图,Gāodé Dìtú,고덕지도(지도 앱),명사
-出租车,chūzūchē,택시,명사
-司机,sījī,운전기사,명사
-APP,APP,앱,명사
-下单,xiàdān,주문하다/콜 넣다,동사
-接单,jiēdān,콜을 받다,동사
-登录,dēnglù,로그인하다,동사
-单,dān,주문/콜,명사
-附近,fùjìn,근처,명사
-接收到,jiēshōudào,수신하다/받다,동사
-适应,shìyìng,적응하다,동사
-只是,zhǐshì,단지,부사
-快,kuài,빠르다,형용사
-拉,lā,(차로) 태우다,동사
-打车,dǎ chē,택시를 부르다,동사구
-打个车,dǎ gè chē,택시 한 대 부르다,동사구
-倒车,dào chē,후진하다,동사
-拼车,pīnchē,카풀하다,동사
-可能性,kěnéngxìng,가능성,명사
-七年,qī nián,7년,명사
-以前,yǐqián,이전/전에,명사
-以后,yǐhòu,이후/뒤에,명사
-最近,zuìjìn,최근,부사
-很少,hěn shǎo,매우 적다,부사
-记,jì,기억하다,동사
-记得,jìde,기억하다(해내다),동사
-清楚,qīngchu,분명하다,형용사
-记不清,jì bu qīng,기억이 분명하지 않다,동사구
-糊涂,hútu,헷갈리다,형용사
-市中心,shìzhōngxīn,도심,명사
-上海,Shànghǎi,상하이,명사
-北京,Běijīng,베이징,명사
-西安,Xī’ān,시안,명사
-厉害,lìhai,심하다,형용사
-堵得厉害,dǔ de lìhai,심하게 막히다,동사구
-赶不上,gǎn bu shàng,(시간에) 맞추지 못하다,동사
-改,gǎi,바꾸다,동사
-飞机,fēijī,비행기,명사
-交通事故,jiāotōng shìgù,교통사고,명사
-区间,qūjiān,구간,명사
-部分,bùfen,부분,명사
-区域,qūyù,구역/지역,명사
-一段路,yí duàn lù,한 구간의 도로,명사구
-禁止,jìnzhǐ,금지하다,동사
-通行,tōngxíng,통행하다,동사
-禁止通行,jìnzhǐ tōngxíng,통행 금지,동사구
-访问,fǎngwèn,방문하다,동사
-领导,lǐngdǎo,지도자,명사
-中央,zhōngyāng,중앙,명사
-习近平,Xí Jìnpíng,시진핑,고유명사
-普京,Pǔjīng,푸틴,고유명사
-金正恩,Jīn Zhèng’ēn,김정은,고유명사
-动,dòng,움직이다,동사
-内三环,nèi sān huán,베이징 내3환,명사
-禁行,jìnxíng,통행 금지,명사/동사
-出行,chūxíng,이동/외출,명사/동사
-电动自行车,diàndòng zìxíngchē,전기 자전거,명사
-背包,bèibāo,배낭,명사
-装,zhuāng,담다/넣다,동사
-严格,yángé,엄격하다,형용사
-几乎,jīhū,거의,부사
-突然,tūrán,갑자기,부사
-忽然,hūrán,문득,부사
-差不多,chàbuduō,비슷하다/거의,형용사/부사
-不太,bù tài,그다지 ~않다,부사
-经常,jīngcháng,자주,부사
-不怎么,bù zěnme,별로 ~하지 않다,부사
-组成,zǔchéng,구성하다,동사
-字,zì,글자,명사
-词,cí,단어,명사
-背,bèi,외우다,동사
-翻译,fānyì,번역,명사
-分辨,fēnbié,구별하다,동사
-太阳,tàiyáng,태양,명사
-犬,quǎn,개,명사
-房子,fángzi,집,명사
-窗,chuāng,창문,명사
-屋顶,wūdǐng,지붕,명사
-门,mén,문,명사
-心,xīn,마음,명사
-每天,měitiān,매일,부사
-经过,jīngguò,지나가다,동사
-一眼,yìyǎn,한눈에,부사
-发现,fāxiàn,발견하다,동사
-餐厅,cāntīng,식당,명사
-注意,zhùyì,주의하다,동사
-走来走去,zǒu lái zǒu qù,왔다 갔다 하다,동사구
-存在,cúnzài,존재하다,동사
-不存在,bù cúnzài,존재하지 않다,동사
-周一,Zhōuyī,월요일,명사
-特别,tèbié,특히/매우,부사/형용사
-快到,kuài dào,거의 도착하다,동사구
-几辆,jǐ liàng,몇 대,수량사구
-车,chē,차,명사
-追尾,zhuīwěi,추돌하다,동사
-等,děng,기다리다,동사
-时间,shíjiān,시간,명사
-交通工具,jiāotōng gōngjù,교통수단,명사
-电动车,diàndòngchē,전동 이동수단,명사
-觉得,juéde,생각하다/느끼다,동사
-什么,shénme,무엇,의문대명사
-更,gèng,더,부사
-安全,ānquán,안전,명사
-问题,wèntí,문제,명사
-乘客,chéngkè,승객,명사
-必须,bìxū,반드시 ~해야,조동사
-系好,jì hǎo,(벨트 등) 단단히 매다,동사
-安全带,ānquándài,안전벨트,명사
-入口,rùkǒu,입구,명사
-试乘,shìchéng,시승/시험 탑승,명사/동사
-稳,wěn,안정적이다,형용사
-过,guò,통과하다/지나다,동사
-弯道,wāndào,커브,명사
-驾驶室,jiàshǐshì,운전실,명사
-前方,qiánfāng,전방,명사
-玻璃,bōli,유리,명사
-隔板,gébǎn,칸막이,명사
-手动,shǒudòng,수동으로,부사/형용사
-滑出,huáchū,슬라이드로 꺼내다,동사
-操作装置,cāozuò zhuāngzhì,조작 장치,명사
-屏幕,píngmù,화면,명사
-看到,kàndào,보다/확인하다,동사
-车道,chēdào,차선,명사
-包括,bāokuò,포함하다,동사
-过往,guòwǎng,지나가는/과거의,형용사
-车辆,chēliàng,차량,명사
-适应度,shìyìngdù,적응도,명사
-规制,guīzhì,규제/통제,명사
-工作人员,gōngzuò rényuán,직원,명사
-等候,děnghòu,대기하다,동사
-挺,tǐng,꽤,부사
-靠站,kào zhàn,(정류장에) 정차하다,동사
-目的地,mùdìdì,목적지,명사
-到了,dào le,도착했다,동사구
-十年,shí nián,10년,명사
-二十年,èrshí nián,20년,명사
-携带,xiédài,휴대하다,동사
-现金,xiànjīn,현금,명사
-金额,jīn’é,금액,명사
-最大,zuìdà,가장 크다,형용사
-最,zuì,가장,부사
-抢,qiǎng,강탈하다,동사
-造成危险,zàochéng wēixiǎn,위험을 초래하다,동사구
-正规,zhèngguī,정규의/공식적인,형용사
-出租车公司,chūzūchē gōngsī,택시 회사,명사
-空间,kōngjiān,공간,명사
-铁质,tiězhì,철제,명사/형용사
-保证,bǎozhèng,보장하다,동사
-扫码,sǎomǎ,QR코드 스캔하다,동사
-结账,jiézhàng,계산하다/결제하다,동사
-现场直播,xiànchǎng zhíbō,라이브 방송,명사
-上班高峰时间,shàngbān gāofēng shíjiān,출근 러시아워,명사구
-高峰时间,gāofēng shíjiān,러시아워,명사
-选字填空,xuǎn zì tiánkòng,글자 선택 빈칸 채우기,동사구
-急,jí,급하다,형용사
-末,mò,끝,명사
-节假日,jiéjiàrì,공휴일,명사
-挤,jǐ,붐비다,동사/형용사
-并,bìng,전혀(부정 강조),부사
-用,yòng,사용하다,동사
-说明,shuōmíng,설명하다,동사
-股票,gǔpiào,주식,명사
-买,mǎi,사다,동사
-卖,mài,팔다,동사
-钱,qián,돈,명사
-贵,guì,비싸다,형용사
-早,zǎo,일찍,부사
-知道,zhīdào,알다,동사
-这样,zhèyàng,이렇게,대명사
-就,jiù,그러면/바로,부사
-调,tiáo,조정하다/옮기다,동사
-清场,qīngchǎng,퇴장시키다,동사
-离开,líkāi,떠나다,동사
-过来,guòlái,이쪽으로 오다,동사
-吃饭,chīfàn,밥 먹다,동사
-保安,bǎo’ān,보안요원,명사
-场地,chǎngdì,장소,명사
-安静,ānjìng,조용하다,형용사
-他们,tāmen,그들,대명사
-出,chū,(문제를) 내다,동사
-考试,kǎoshì,시험,명사
-题,tí,문제,명사
-见,jiàn,만나다,동사
-上有天堂下有苏杭,shàng yǒu tiān táng xià yǒu sū háng,위엔 천당 아래엔 소주·항저우,속담
-背锅, bēi guō, 책임을 뒤집어쓰다, 동사구
-甩, shuǎi, 던지다/뿌리치다, 동사
-甩锅, shuǎi guō, 책임을 떠넘기다, 동사구
-推给, tuī gěi, ~에게 떠넘기다, 동사
-错误, cuòwù, 잘못/오류, 명사
-
-因为, yīnwèi, 왜냐하면, 접속사
-一开始, yì kāishǐ, 처음에, 부사구
-先, xiān, 먼저, 부사
-确认, quèrèn, 확인하다, 동사
-原材料, yuáncáiliào, 원자재, 명사
-价格, jiàgé, 가격, 명사
-
-排队, páiduì, 줄 서다, 동사
-原来, yuánlái, 알고 보니/원래, 부사
-有名, yǒumíng, 유명하다, 형용사
-挂着, guà zhe, 달려 있다/걸려 있다, 동사(+着)
-饰品, shìpǐn, 장식품/액세서리, 명사
-书包, shūbāo, 책가방, 명사
-各种各样, gèzhǒng gèyàng, 다양하다, 형용사구
-
-提到, tí dào, 언급하다, 동사
-说到, shuō dào, ~을 말하자면, 동사
-习惯于, xíguàn yú, ~에 익숙하다, 동사구
-强调, qiángdiào, 강조하다, 동사
-
-火锅, huǒguō, 훠궈, 명사
-麻辣烫, málàtàng, 마라탕, 명사
-麻辣, málà, 마라 맛(맵고 얼얼한), 형용사
-味道, wèidào, 맛/냄새, 명사
-口味, kǒuwèi, 입맛, 명사
-对……来说, duì……láishuō, ~에게는/관점에서, 개사구
-或者, huòzhě, 또는, 접속사
-
-时间不长, shíjiān bù cháng, 얼마 안 되다, 형용사구
-当时, dāngshí, 당시, 명사/부사
-夏天, xiàtiān, 여름, 명사
-卫生间, wèishēngjiān, 화장실, 명사
-奇怪, qíguài, 이상하다, 형용사
-饭桌, fànzhuō, 식탁, 명사
-椅子, yǐzi, 의자, 명사
-……上, …shàng, ~위에, 방위사
-让, ràng, ~하게 하다, 동사
-不让, bù ràng, ~하지 못하게 하다, 동사
-加班, jiābān, 야근하다, 동사
-做家务, zuò jiāwù, 집안일을 하다, 동사구
-上司, shàngsī, 상사, 명사
-下班, xiàbān, 퇴근하다, 동사
-请, qǐng, ~해 주세요(공손), 동사/표현
-把, bǎ, ~을(처리문), 개사
-讲完, jiǎng wán, 끝까지 말하다, 동사구
-寄送, jìsòng, 발송하다/부치다, 동사
-高速公路, gāosù gōnglù, 고속도로, 명사
-摄像头, shèxiàngtóu, 카메라(감시카메라), 명사
-办公室, bàngōngshì, 사무실, 명사
-走廊, zǒuláng, 복도, 명사
-监视, jiānshì, 감시(하다), 명사/동사
-手机, shǒujī, 휴대폰, 명사
-常用,chángyòng,자주 쓰이다/상용의,형용사
-韩国语,Hánguóyǔ,한국어,명사
-汉语,Hànyǔ,중국어,명사
-听过,tīngguo,들어본 적 있다,동사
-呢,ne,화제 전환/반문 조사,조사
-是吗,shìma,그래요?/맞아요?,표현
-对吗,duìma,맞나요?,표현
-
-去,qù,가다,동사
-中国,Zhōngguó,중국,명사
-以后,yǐhòu,이후/나중에,부사/명사
-之前,zhīqián,이전/전에,부사/명사
-争取,zhēngqǔ,노력하여 얻다/쟁취하다,동사
-学,xué,배우다,동사
-学会,xuéhuì,배워서 익히다(할 줄 알게 되다),동사
-打,dǎ,(운동을) 하다,동사
-乒乓球,pīngpāngqiú,탁구,명사
-
-写,xiě,작성하다/쓰다,동사
-写完,xiěwán,다 쓰다(완료),동사구
-写好,xiěhǎo,잘 완성하다,동사구
-报告,bàogào,보고서,명사
-发,fā,보내다,동사
-发给,fāgěi,~에게 보내다,동사구
-上司,shàngsī,상사,명사
-
-细心,xìxīn,세심하다/꼼꼼하다,형용사
-
-选择,xuǎnzé,선택하다/선택,동사/명사
-障碍,zhàng’ài,장애/방해,명사
-选择障碍,xuǎnzé zhàng’ài,선택장애,명사
-
-嗓门,sǎngmén,목소리 크기/큰 목소리,명사
-
-直接,zhíjiē,직접/바로,부사/형용사
-直播,zhíbō,라이브 방송(하다),명사/동사
-带货,dàihuò,라이브 판매하다,동사
-直播带货,zhíbō dàihuò,라이브커머스,명사/동사구
-看过,kànguo,본 적 있다,동사
-卖,mài,팔다,동사
-手机,shǒujī,휴대폰,명사
-免税店,miǎnshuìdiàn,면세점,명사
-为什么,wèishénme,왜,의문사
-
-偶像,ǒuxiàng,아이돌/우상,명사
-带出来,dài chūlái,가지고 나오다/알리다,동사구
-带火,dài huǒ,유행시키다/인기 있게 만들다,동사구
-产品,chǎnpǐn,제품,명사
-人气,rénqì,인기,명사
-变得,biàn de,~하게 변하다,동사구
-因为,yīnwèi,~때문에,접속사
-所以,suǒyǐ,그래서,접속사
-
-线上,xiànshàng,온라인,명사
-线下,xiànxià,오프라인,명사
-结合,jiéhé,결합하다,동사
-品牌,pǐnpái,브랜드,명사
-比如说,bǐrú shuō,예를 들어,표현
-知不知道,zhī bù zhīdào,알아요?/알고 있나요?,동사구
-
-鲜,xiān,신선하다,형용사
-生,shēng,날것/신선한 상태,명사/형용사
-鲜生,xiānshēng,‘신선함’을 강조한 상호 표현,명사
-
-老公,lǎogōng,남편,명사
-买,mǎi,사다,동사
-就行了,jiù xíng le,~하면 된다,표현
-别,bié,~하지 마,부사
-管,guǎn,신경 쓰다/간섭하다,동사
-
-今年,jīnnián,올해,명사
-销售,xiāoshòu,판매,명사/동사
-目标,mùbiāo,목표,명사
-实现,shíxiàn,달성하다/실현하다,동사
-预计,yùjì,예상하다,동사
-经济,jīngjì,경제,명사
-经营情况,jīngyíng qíngkuàng,경영 상황,명사
-听说,tīngshuō,듣자 하니/~라고 들었다,동사
-销售额,xiāoshòué,매출액,명사
-左右,zuǒyòu,약/정도,부사/명사
-
-我们,wǒmen,우리,대명사
-还,hái,아직,부사
-剩,shèng,남다,동사
-还有,hái yǒu,아직 있다,동사구
-几,jǐ,몇,의문사
-分钟,fēnzhōng,분,명사
-第一,dìyī,첫 번째,수사
-批,pī,물량/차례,양사
-货物,huòwù,화물/물품,명사
-打算,dǎsuàn,계획하다,동사
-下个月,xià gè yuè,다음 달,명사
-发货,fāhuò,출고하다/발송하다,동사
-没问题,méi wèntí,문제없다,표현
-跟,gēn,~와/에게,개사
-聊,liáo,이야기하다,동사
-聊一聊,liáo yì liáo,잠깐 이야기하다,동사구
-工作情况,gōngzuò qíngkuàng,업무 상황,명사
-请,qǐng,초대하다/부르다,동사
-叫,jiào,부르다/시키다,동사
-为了,wèile,~하기 위해,개사
-让,ràng,~하게 하다,동사
-准备,zhǔnbèi,준비하다,동사
-会议,huìyì,회의,명사
-事情,shìqing,일/사안,명사
-三个人,sān gè rén,세 사람/3명,수량구
-开会,kāihuì,회의하다,동사
-的话,de huà,~하면/~라면,조사(구어표현)
-说话,shuōhuà,말하다,동사
-得,děi,~해야 한다/필요하다,조동사
-太多,tài duō,너무 많다,형용사/부사
-
-达到,dádào,도달하다,동사
-一定,yídìng,일정한/반드시,형용사/부사
-水平,shuǐpíng,수준,명사
-读,dú,읽다,동사
-写,xiě,쓰다,동사
-能力,nénglì,능력,명사
-落后,luòhòu,뒤처지다/낙후되다,동사/형용사
-不会,bù huì,~하지 못하다/하지 않을 것이다,조동사
-进步,jìnbù,발전하다/진보,동사/명사
-学习,xuéxí,학습하다/공부하다,동사/명사
-外语,wàiyǔ,외국어,명사
-情况,qíngkuàng,상황,명사
-常常,chángcháng,자주,부사
-阶梯,jiētī,계단/단계,명사
-阶梯式,jiētīshì,계단식의,형용사
-开始,kāishǐ,시작하다,동사
-零,líng,0/영,수사
-突然,tūrán,갑자기,부사
-拼音,pīnyīn,병음,명사
-句子,jùzi,문장,명사
-程度,chéngdù,정도/단계,명사
-变化,biànhuà,변화,명사/동사
-很长时间,hěn cháng shíjiān,아주 오랜 시간,명사구
-
-带刀痕迹,dài dāo hénjì,칼로 베인 흔적(을 지니다),동사구
-痕迹,hénjì,흔적,명사
-历史,lìshǐ,역사,명사
-留下来,liú xià lái,남기다/남겨지다,동사
-有名,yǒumíng,유명하다,형용사
-地方,dìfang,장소/곳,명사
-比如说,bǐrúshuō,예를 들어,접속사
-长城,Chángchéng,만리장성,명사
-
-都是,dōu shì,모두 ~이다,부사구
-一些,yìxiē,일부/몇몇,수량사
-古坟,gǔfén,옛 무덤,명사
-古墓,gǔmù,고분/옛 무덤,명사
-孩子,háizi,아이,명사
-华清池,Huáqīngchí,화청지(지명),명사
-根本,gēnběn,전혀,부사
-解说员,jiěshuōyuán,해설원/가이드,명사
-解说,jiěshuō,해설/설명하다,동사/명사
-什么都不知道,shénme dōu bù zhīdào,아무것도 모르다,동사구
-好玩,hǎowán,재미있다,형용사
-那么,nàme,그렇게/그만큼,부사
-纯粹,chúncuì,순수하게/그냥,형용사/부사
-坟墓,fénmù,무덤,명사
-行不行,xíng bù xíng,되겠니?/괜찮니?,의문표현
-
-西安,Xī’ān,시안(지명),명사
-墙,qiáng,벽,명사
-水,shuǐ,물/물기,명사
-非常,fēicháng,매우,부사
-潮湿,cháoshī,습하다/습기 차다,형용사
-一个月,yí gè yuè,한 달,명사구
-时间,shíjiān,시간,명사
-基本上,jīběnshàng,거의/대체로,부사
-太阳,tàiyáng,태양/햇빛,명사
-看到,kàndào,보다/보게 되다,동사
-天气,tiānqì,날씨,명사
-奇怪,qíguài,이상하다,형용사
-没有,méiyǒu,없다/~하지 않았다,동사
-
-香味,xiāngwèi,향기/향 냄새,명사
-好像,hǎoxiàng,~인 것 같다,부사
-上香,shàngxiāng,향을 피우다/올리다,동사
-祭祀,jìsì,제사/제사를 지내다,명사/동사
-点着,diǎnzhe,불을 붙여 켜두다,동사
-一根,yì gēn,한 개비(막대 수량),수량사구
-两根,liǎng gēn,두 개비,수량사구
-香,xiāng,향(향초),명사
-不知道,bù zhīdào,모르다,동사
-住得远,zhù de yuǎn,집이 멀다,형용사구
-住得近,zhù de jìn,집이 가깝다,형용사구
-开车,kāichē,차로 오다/운전하다,동사
-乘坐,chéngzuò,(교통수단을) 타다,동사
-通勤,tōngqín,통근,명사
-班车,bānchē,셔틀버스/통근버스,명사
-通勤班车,tōngqín bānchē,통근버스,명사
-上下班,shàngxiàbān,출퇴근하다,동사
-不可能,bù kěnéng,불가능하다,형용사
-每位,měi wèi,각(사람을 세는 말),수량사
-员工,yuángōng,직원,명사
-附近,fùjìn,근처,명사
-设置,shèzhì,설치하다/배치하다,동사
-停靠点,tíngkào diǎn,정차 지점,명사
-
-餐厅,cāntīng,식당,명사
-菜,cài,요리/음식,명사
-好吃,hǎochī,맛있다,형용사
-满意,mǎnyì,만족하다/만족스럽다,형용사/동사
-不过,búguò,다만/하지만,접속사
-外卖,wàimài,배달/테이크아웃,명사
-种类,zhǒnglèi,종류,명사
-应该,yīnggāi,~해야 한다/~하는 게 좋다,조동사
-更,gèng,더,부사
-一些,yìxiē,조금/약간,수량사
-
-盘子,pánzi,접시,명사
-摆,bǎi,놓다/진열하다,동사
-满满的,mǎnmǎn de,가득한,형용사
-吃的东西,chī de dōngxi,먹을 것,명사구
-结束,jiéshù,끝나다/마감하다,동사
-下课,xiàkè,수업이 끝나다,동사
-才,cái,(늦게서야) 비로소,부사
-拿到,ná dào,받다/손에 넣다,동사
-
-总结,zǒngjié,정리하다/총정리,동사/명사
-结果,jiéguǒ,결과,명사
-成果,chéngguǒ,성과,명사
-结论,jiélùn,결론,명사
-结构,jiégòu,구조,명사
-内容,nèiróng,내용,명사
-情况,qíngkuàng,상황,명사
-一下,yíxià,한 번/잠깐(완곡),보어
-
-想办法,xiǎng bànfǎ,방법을 찾다/대책을 세우다,동사구
-限定,xiàndìng,제한하다,동사
-成本,chéngběn,비용/원가,명사
-降低,jiàngdī,낮추다/줄이다,동사
-节约,jiéyuē,절약하다/절감하다,동사
-
-现在,xiànzài,요즘/지금,명사/부사
-年轻人,niánqīngrén,젊은 사람,명사
-不怎么,bù zěnme,거의 ~않다,부사
-喝,hē,마시다,동사
-烧酒,shāojiǔ,소주,명사
-丈母娘,zhàngmuniáng,장모,명사
-岳母,yuèmǔ,장모(격식),명사
-或者,huòzhě,또는,접속사
-意思,yìsi,뜻/의미,명사
-一样,yíyàng,같다,형용사
-想,xiǎng,~하고 싶다/생각하다,동사
-孩子,háizi,아이/자녀,명사
-给,gěi,주다,동사
-压岁钱,yāsuìqián,세뱃돈,명사
-太太,tàitai,아내(격식),명사
-可能,kěnéng,아마/가능성이 있다,부사/동사
-应该,yīnggāi,~일 것이다/~해야 한다,조동사
-准备,zhǔnbèi,준비하다/준비,동사/명사
-能,néng,~할 수 있다,조동사
-一起,yìqǐ,함께,부사
-学习,xuéxí,공부하다/학습,동사/명사
-感到,gǎndào,느끼다,동사
-荣幸,róngxìng,영광이다/영광,형용사/명사
-今年,jīnnián,올해,명사
-马年,mǎnián,말의 해,명사
-祝,zhù,기원하다/축하하다,동사
-像,xiàng,~처럼,전치사
-奔跑,bēnpǎo,달리다,동사
-健康,jiànkāng,건강하다/건강,형용사/명사
-程序,chéngxù,절차/과정,명사
-手续,shǒuxù,수속/행정 절차,명사
-办理,bànlǐ,처리하다/수속하다,동사
-练习,liànxí,연습하다/연습,동사/명사
-工资,gōngzī,월급/급여,명사
-同事,tóngshì,동료,명사
-三五百,sān wǔ bǎi,3~5백(대략),수량구
-其他,qítā,다른/기타,형용사
-情况,qíngkuàng,상황,명사
-主要,zhǔyào,주로/주요한,부사/형용사
-关系,guānxi,관계,명사
-几千,jǐ qiān,몇 천,수량구
-几百,jǐ bǎi,몇 백,수량구
-中国人,zhōngguó rén,중국 사람,명사
-结婚,jiéhūn,결혼하다/결혼,동사/명사
-红包,hóngbāo,홍바오(축의금 봉투),명사
-婚礼,hūnlǐ,결혼식,명사
-办,bàn,치르다/열다/처리하다,동사
-饭店,fàndiàn,식당/호텔,명사
-家里,jiālǐ,집에서/집 안,명사/부사
-课文,kèwén,본문,명사
-部分,bùfen,부분,명사
-问题,wèntí,문제,명사
-没什么,méi shénme,별로~없다,관용표현
-买,mǎi,사다,동사
-进口车,jìnkǒu chē,수입차,명사
-目标,mùbiāo,목표,명사
-实现,shíxiàn,실현하다/이루다,동사
-当上,dāngshàng,~이 되다(직책을 맡다),동사구
-班长,bānzhǎng,반장,명사
-努力,nǔlì,노력하다/노력,동사/명사
-为,wèi,~을 위해,전치사
-做事情,zuò shìqing,일을 하다,동사구
-喜欢,xǐhuan,좋아하다,동사
-支持,zhīchí,지지하다/지원,동사/명사
-选,xuǎn,뽑다/선택하다,동사
-生活,shēnghuó,생활,명사
-条件,tiáojiàn,조건/환경,명사
-好了,hǎo le,좋아지다(상태변화),형용사+조사
-住,zhù,살다/거주하다,동사
-住上,zhùshàng,살게 되다(결과),동사구
-楼房,lóufáng,아파트/층 있는 건물,명사
-姓氏,xìngshì,성씨,명사
-发音,fāyīn,발음,명사
-可惜,kěxī,아깝다/안타깝다,형용사
-保健品,bǎojiànpǐn,건강보조식품,명사
-保持,bǎochí,유지하다,동사
-吵,chǎo,시끄럽다/떠들다,형용사/동사
-赶紧,gǎnjǐn,서둘러/빨리,부사
-督促,dūcù,재촉하다/독촉하다,동사
-几分,jǐ fēn,몇 퍼센트(몇 분),수량구
-含,hán,함유하다,동사
-含量,hánliàng,함량,명사
-多少,duōshao,얼마/몇,의문사
-酒精,jiǔjīng,알코올,명사
-长,cháng/zhǎng,길다/자라다/우두머리,형용사/동사/명사
-科长,kēzhǎng,과장,명사
-副长,fùzhǎng,부장/부책임자,명사
-长辈,zhǎngbèi,연장자/어른,명사
-长大,zhǎngdà,자라다/성장하다,동사
-了解,liǎojiě,알다/파악하다,동사
-理解,lǐjiě,이해하다,동사
-离婚,líhūn,이혼하다/이혼,동사/명사
-原因,yuányīn,원인,명사
-客观,kèguān,객관적인,형용사
-事实,shìshí,사실,명사
-性格,xìnggé,성격,명사
-爱人,àirén,배우자,명사
-抽烟,chōuyān,담배 피우다,동사
-喝酒,hējiǔ,술 마시다,동사
-工资,gōngzī,월급,명사
-受不了,shòu bu liǎo,못 견디다,동사구
-包车,bāochē,기사 포함 대절하다,동사
-租车,zūchē,렌트하다,동사
-司机,sījī,운전기사,명사
-附近,fùjìn,근처,명사
-开过来,kāi guòlái,운전해서 가져오다,동사구
-优先,yōuxiān,우선하다/우선적으로,부사/동사
-满足,mǎnzú,충족시키다,동사
-忽视,hūshì,무시하다,동사
-及时,jíshí,제때,부사
-采取措施,cǎiqǔ cuòshī,조치를 취하다,동사구
-不满意,bù mǎnyì,불만이다,형용사
-幸亏,xìngkuī,다행히,부사
-不然,bùrán,그렇지 않으면,접속사
-否则,fǒuzé,그렇지 않으면,접속사
-要不然,yàobùrán,그렇지 않으면,접속사
-提前,tíqián,미리,부사
-才,cái,비로소/~해야만,부사
-生气,shēngqì,화내다,동사
-发脾气,fā píqì,성질내다,동사구
-类似,lèisì,비슷하다,형용사
-错误,cuòwù,실수/오류,명사
-网约车,wǎngyuēchē,온라인 차량 호출 서비스,명사
-定位,dìngwèi,위치 설정,동사/명사
-供应,gōngyìng,공급하다/공급,동사/명사
-不足,bùzú,부족하다,형용사
-供过于求,gōng guò yú qiú,공급 과잉,성어
-供不应求,gōng bù yìng qiú,수요 초과,성어
-不管,bùguǎn,상관하지 않다/~에 관계없이,동사/접속사
-淡定,dàndìng,침착하다,형용사
-准确,zhǔnquè,정확하다,형용사
