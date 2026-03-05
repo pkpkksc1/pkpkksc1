@@ -44,9 +44,9 @@
     .rightBox{
       display:flex;
       flex-direction:column;
-      gap:8px;
+      gap:10px;
       align-items:flex-end;
-      min-width: 260px;
+      min-width: 300px;
     }
 
     .controls{
@@ -54,7 +54,7 @@
     }
     button{
       border:0; border-radius:14px;
-      padding:10px 14px;
+      padding:12px 16px;          /* ✅ 전체 버튼 키움 */
       font-weight:900;
       cursor:pointer;
       user-select:none;
@@ -63,19 +63,12 @@
     .secondary{ background:var(--btn2); color:var(--btn2Text); }
     .danger{ background:var(--danger); color:white; }
 
-    /* ✅ 이전/다음 크게 (PC/모바일 터치 좋게) */
+    /* ✅ 이전/다음 버튼 더 크게 */
     .navBig{
-      padding:14px 18px;
-      border-radius:18px;
+      padding:14px 20px;
+      border-radius:16px;
       font-size:16px;
-      min-width:92px;
-    }
-    @media (max-width:560px){
-      .navBig{
-        padding:16px 18px;
-        font-size:17px;
-        min-width:110px;
-      }
+      letter-spacing:.2px;
     }
 
     .ttsBar{
@@ -89,7 +82,7 @@
       font-weight:800;
     }
     .ttsBar input[type="range"]{
-      width:140px;
+      width:160px;
       accent-color: var(--accent);
     }
     .pillMini{
@@ -213,7 +206,7 @@
     @media (max-width:560px){
       .hanzi{ font-size:76px; }
       .pill{ min-width: 100%; }
-      .ttsBar input[type="range"]{ width: 180px; }
+      .ttsBar input[type="range"]{ width: 190px; }
     }
   </style>
 </head>
@@ -227,9 +220,9 @@
 
       <div class="rightBox">
         <div class="controls">
-          <button class="secondary navBig" id="toggleHide">뜻 가리기</button>
-          <button class="secondary navBig" id="speak">🔊 듣기</button>
-          <button class="secondary navBig" id="random">랜덤</button>
+          <button class="secondary" id="toggleHide">뜻 가리기</button>
+          <button class="secondary" id="speak">🔊 듣기</button>
+          <button class="secondary" id="random">랜덤</button>
           <button class="secondary navBig" id="prev">이전</button>
           <button class="primary  navBig" id="next">다음</button>
         </div>
@@ -262,8 +255,8 @@
       <div class="panelRow">
         <div style="font-weight:900;">데이터 붙여넣기</div>
         <div class="controls">
+          <button class="secondary" id="reloadCsv">📥 CSV 새로고침</button>
           <button class="primary" id="load">불러오기</button>
-          <!-- ✅ 샘플 버튼 삭제 -->
           <button class="danger" id="clear">초기화</button>
         </div>
       </div>
@@ -286,17 +279,18 @@
       </div>
     </div>
 
-    <div class="footerHint">※ 데이터/입력칸/설정은 이 브라우저에 자동 저장돼. (localStorage)</div>
+    <div class="footerHint">※ 입력칸/설정은 이 브라우저에 자동 저장돼. (localStorage)</div>
   </div>
 
 <script>
   const $ = (id) => document.getElementById(id);
 
-  const STORAGE_KEY = "vocab_cards_v1";
-  const INPUT_KEY   = "vocab_cards_input_v1";
-  const TTS_KEY     = "vocab_cards_tts_v1";
+  // ✅ cards는 기본적으로 vocab.csv 기준으로 로드
+  // localStorage에는 "입력칸/설정"만 저장 (CSV 업데이트가 즉시 반영되게)
+  const INPUT_KEY   = "vocab_cards_input_v2";
+  const TTS_KEY     = "vocab_cards_tts_v2";
+  const UI_KEY      = "vocab_cards_ui_v2";
 
-  // ✅ GitHub Pages 루트에 vocab.csv 있으면 OK
   const DEFAULT_CSV_FILE = "vocab.csv";
 
   let cards = [];
@@ -320,19 +314,24 @@
       }
 
       const tokens = line.split(/\s+/);
-      if (tokens.length < 4) continue;
+      if (tokens.length < 3) continue;
 
+      // 공백형: 한자 [병음...] [한국어...] [품사(선택)]
+      // 품사 없을 수도 있으니 유연하게 처리
       const hanzi = tokens[0];
-      const pos = tokens[tokens.length - 1];
 
       let firstKoIdx = -1;
-      for (let i = 1; i < tokens.length - 1; i++) {
+      for (let i = 1; i < tokens.length; i++) {
         if (/[가-힣]/.test(tokens[i])) { firstKoIdx = i; break; }
       }
       if (firstKoIdx === -1) continue;
 
+      const maybePos = tokens[tokens.length - 1];
+      const hasPos = /명사|동사|형용사|부사|대명사|수사|조사|관형사|감탄사|구어|표현/i.test(maybePos);
+
       const pinyin = tokens.slice(1, firstKoIdx).join(" ");
-      const korean = tokens.slice(firstKoIdx, tokens.length - 1).join(" ");
+      const korean = tokens.slice(firstKoIdx, hasPos ? tokens.length - 1 : tokens.length).join(" ");
+      const pos = hasPos ? maybePos : "";
 
       parsed.push({ hanzi, pinyin, korean, pos });
     }
@@ -340,23 +339,13 @@
     return parsed;
   }
 
-  function save() {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ cards, idx, hideMeaning }));
+  function saveUI() {
     localStorage.setItem(INPUT_KEY, $("input").value);
     localStorage.setItem(TTS_KEY, JSON.stringify({ ttsRate, chosenVoiceName }));
+    localStorage.setItem(UI_KEY, JSON.stringify({ idx, hideMeaning }));
   }
 
-  function loadSaved() {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) {
-      try{
-        const obj = JSON.parse(raw);
-        if (Array.isArray(obj.cards)) cards = obj.cards;
-        if (Number.isFinite(obj.idx)) idx = obj.idx;
-        if (typeof obj.hideMeaning === "boolean") hideMeaning = obj.hideMeaning;
-      }catch(e){}
-    }
-
+  function loadSavedUI() {
     const savedText = localStorage.getItem(INPUT_KEY);
     if (savedText !== null) $("input").value = savedText;
 
@@ -368,6 +357,15 @@
         if (typeof t.chosenVoiceName === "string") chosenVoiceName = t.chosenVoiceName;
       }catch(e){}
     }
+
+    const savedUI = localStorage.getItem(UI_KEY);
+    if (savedUI) {
+      try{
+        const u = JSON.parse(savedUI);
+        if (Number.isFinite(u.idx)) idx = u.idx;
+        if (typeof u.hideMeaning === "boolean") hideMeaning = u.hideMeaning;
+      }catch(e){}
+    }
   }
 
   function clampIndex() {
@@ -376,7 +374,7 @@
     if (idx >= cards.length) idx = cards.length - 1;
   }
 
-  function render() {
+  function render(metaPrefix = "") {
     clampIndex();
 
     if (cards.length === 0) {
@@ -384,7 +382,7 @@
       $("pinyin").textContent = "—";
       $("korean").textContent = "—";
       $("pos").textContent = "";
-      $("meta").textContent = "자동 로드 중이거나, 아래에 데이터를 붙여넣고 ‘불러오기’ 눌러줘!";
+      $("meta").textContent = metaPrefix || "vocab.csv 자동 로드 중… 또는 아래에 데이터를 넣고 ‘불러오기’를 눌러줘!";
       return;
     }
 
@@ -397,31 +395,33 @@
     ko.textContent = c.korean || "—";
     ko.classList.toggle("hiddenText", hideMeaning);
 
-    $("meta").textContent = `${idx + 1} / ${cards.length}` + (c.pos ? ` · ${c.pos}` : "");
+    $("meta").textContent = `${metaPrefix}${idx + 1} / ${cards.length}` + (c.pos ? ` · ${c.pos}` : "");
   }
 
   function next() {
     if (cards.length === 0) return;
     idx = (idx + 1) % cards.length;
-    render(); save();
+    render();
+    saveUI();
   }
   function prev() {
     if (cards.length === 0) return;
     idx = (idx - 1 + cards.length) % cards.length;
-    render(); save();
+    render();
+    saveUI();
   }
   function randomPick() {
     if (cards.length === 0) return;
-    if (cards.length === 1) { idx = 0; render(); save(); return; }
+    if (cards.length === 1) { idx = 0; render(); saveUI(); return; }
     let r;
     do { r = Math.floor(Math.random() * cards.length); } while (r === idx);
     idx = r;
-    render(); save();
+    render();
+    saveUI();
   }
 
   function getPreferredVoice() {
     if (!("speechSynthesis" in window)) return null;
-
     const voices = window.speechSynthesis.getVoices() || [];
     if (voices.length === 0) return null;
 
@@ -467,46 +467,41 @@
     speakChinese(cards[idx].hanzi);
   }
 
-  // ✅ 자동 로드: 저장된 카드가 없으면 vocab.csv를 읽어와서 자동 불러오기
-  async function autoLoadDefaultIfNeeded() {
-    const hasSavedCards = Array.isArray(cards) && cards.length > 0;
-    const hasInputText = ($("input").value || "").trim().length > 0;
+  // ✅ 핵심: vocab.csv는 새로고침하면 항상 최신으로 다시 읽는다
+  async function loadFromCsv({ keepIndex = true } = {}) {
+    const oldHanzi = (cards[idx] && cards[idx].hanzi) ? cards[idx].hanzi : null;
 
-    if (hasSavedCards) return;
+    try{
+      render("CSV 로드 중… · ");
+      const res = await fetch(`${DEFAULT_CSV_FILE}?v=${Date.now()}`); // 캐시 방지
+      if (!res.ok) throw new Error("fetch failed");
 
-    if (!hasInputText) {
-      try{
-        const res = await fetch(`${DEFAULT_CSV_FILE}?v=${Date.now()}`);
-        if (!res.ok) throw new Error("fetch failed");
-        const text = await res.text();
+      const text = await res.text();
+      const parsed = parseLines(text);
 
-        $("input").value = text;
-        localStorage.setItem(INPUT_KEY, text);
-
-        const parsed = parseLines(text);
-        if (parsed.length > 0) {
-          cards = parsed;
-          idx = 0;
-          render();
-          save();
-        } else {
-          render();
-          console.warn("vocab.csv 파싱 결과가 0개야. 형식 확인 필요.");
-        }
-      }catch(e){
-        render();
-        console.warn("기본 데이터 자동 로드 실패:", e);
-      }
-    } else {
-      const parsed = parseLines($("input").value.trim());
-      if (parsed.length > 0) {
-        cards = parsed;
+      if (parsed.length === 0) {
+        cards = [];
         idx = 0;
-        render();
-        save();
-      } else {
-        render();
+        render("CSV 파싱 실패 · ");
+        return;
       }
+
+      cards = parsed;
+
+      if (keepIndex && oldHanzi) {
+        const found = cards.findIndex(x => x.hanzi === oldHanzi);
+        idx = found >= 0 ? found : Math.min(idx, cards.length - 1);
+      } else {
+        idx = 0;
+      }
+
+      render("CSV · ");
+      saveUI();
+    }catch(e){
+      console.warn("CSV load 실패:", e);
+      cards = [];
+      idx = 0;
+      render("CSV 불러오기 실패 · ");
     }
   }
 
@@ -518,12 +513,12 @@
   $("toggleHide").addEventListener("click", () => {
     hideMeaning = !hideMeaning;
     $("toggleHide").textContent = hideMeaning ? "뜻 보이기" : "뜻 가리기";
-    render(); save();
+    render("CSV · ");
+    saveUI();
   });
 
-  $("speak").addEventListener("click", () => {
-    speakCurrent();
-  });
+  $("speak").addEventListener("click", () => speakCurrent());
+  $("card").addEventListener("click", () => speakCurrent());
 
   const rateEl = $("rate");
   const rateLabel = $("rateLabel");
@@ -531,42 +526,48 @@
     ttsRate = Number(val);
     rateEl.value = String(ttsRate);
     rateLabel.textContent = `${ttsRate.toFixed(2)}×`;
-    save();
+    saveUI();
   }
   rateEl.addEventListener("input", (e) => setRate(e.target.value));
 
-  $("card").addEventListener("click", () => {
-    speakCurrent();
-  });
-
+  // 입력칸 기반 "불러오기" (사용자가 붙여넣은 걸로 덮어쓰기)
   $("load").addEventListener("click", () => {
     const text = $("input").value.trim();
     const parsed = parseLines(text);
     if (parsed.length === 0) {
-      alert("형식이 안 맞아! 최소 (한자,병음,한국어) 또는 (한자 병음 한국어 품사) 형태여야 해.");
+      alert("형식이 안 맞아! 최소 (한자,병음,한국어) 또는 (한자 병음 한국어) 형태여야 해.");
       return;
     }
     cards = parsed;
     idx = 0;
-    render();
-    save();
+    render("입력 · ");
+    saveUI();
   });
 
-  // ✅ 샘플 기능/버튼 완전 제거 (여기 이벤트 없음)
+  // ✅ CSV 새로고침 버튼
+  $("reloadCsv").addEventListener("click", () => {
+    loadFromCsv({ keepIndex: true });
+  });
 
+  // 초기화: 입력/설정만 지우고 CSV 다시 로드
   $("clear").addEventListener("click", () => {
-    if (!confirm("저장된 데이터/입력칸/설정도 같이 지울까?")) return;
-    cards = []; idx = 0; hideMeaning = false;
-    localStorage.removeItem(STORAGE_KEY);
+    if (!confirm("입력칸/설정 저장도 같이 지울까?")) return;
+    cards = [];
+    idx = 0;
+    hideMeaning = false;
+
     localStorage.removeItem(INPUT_KEY);
     localStorage.removeItem(TTS_KEY);
+    localStorage.removeItem(UI_KEY);
+
     $("input").value = "";
     $("toggleHide").textContent = "뜻 가리기";
-    setRate(0.9);
     chosenVoiceName = "auto";
+    setRate(0.9);
+
     render();
     refreshVoiceLabel();
-    autoLoadDefaultIfNeeded();
+    loadFromCsv({ keepIndex:false });
   });
 
   $("input").addEventListener("input", () => {
@@ -583,13 +584,11 @@
   });
 
   if ("speechSynthesis" in window) {
-    window.speechSynthesis.onvoiceschanged = () => {
-      refreshVoiceLabel();
-    };
+    window.speechSynthesis.onvoiceschanged = () => refreshVoiceLabel();
   }
 
   // init
-  loadSaved();
+  loadSavedUI();
   $("toggleHide").textContent = hideMeaning ? "뜻 보이기" : "뜻 가리기";
   setRate(ttsRate);
   render();
@@ -597,7 +596,8 @@
   setTimeout(refreshVoiceLabel, 250);
   setTimeout(refreshVoiceLabel, 1000);
 
-  autoLoadDefaultIfNeeded();
+  // ✅ 시작하자마자 vocab.csv 최신 로드 (항상)
+  loadFromCsv({ keepIndex: true });
 </script>
 </body>
 </html>
