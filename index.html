@@ -190,6 +190,7 @@
       gap:18px;
       position:relative;
       overflow:hidden;
+      width:100%;
     }
 
     .posLine{
@@ -217,6 +218,7 @@
       align-items:stretch;
       flex-wrap:wrap;
       padding-top:4px;
+      width:100%;
     }
 
     .pill{
@@ -227,6 +229,7 @@
       min-width:250px;
       max-width:100%;
       box-shadow:0 10px 24px rgba(239,68,68,.08);
+      width:100%;
     }
 
     .label{
@@ -243,12 +246,16 @@
       font-size:20px;
       font-weight:800;
       letter-spacing:.2px;
+      overflow-wrap:anywhere;
+      word-break:break-word;
     }
 
     .korean{
       font-size:21px;
       font-weight:900;
       color:#111827;
+      overflow-wrap:anywhere;
+      word-break:keep-all;
     }
 
     .exampleText{
@@ -256,13 +263,20 @@
       line-height:2;
       font-weight:800;
       color:#111827;
-      white-space:pre-wrap;
-      word-break:keep-all;
+      white-space:normal;
+      word-break:break-all;
+      overflow-wrap:anywhere;
+      max-width:100%;
+      width:100%;
+      display:block;
     }
 
     #exampleWrap{
       display:none;
       padding:26px 24px;
+      max-width:100%;
+      width:100%;
+      overflow:hidden;
     }
 
     .hiddenText{
@@ -330,20 +344,65 @@
         min-width:unset;
         width:100%;
       }
-      .ttsBar{ justify-content:flex-start; }
-      .card{ padding:28px; }
-      .hanzi{ font-size:76px; }
-      .pill{ min-width:100%; }
+
+      .ttsBar{
+        justify-content:flex-start;
+      }
+
+      .card{
+        padding:28px;
+      }
+
+      .hanzi{
+        font-size:76px;
+      }
+
+      .pill{
+        min-width:100%;
+      }
+
+      .pinyin,
+      .korean{
+        font-size:19px;
+      }
+
       .exampleText{
         font-size:22px;
         line-height:1.8;
+        word-break:break-all;
+        overflow-wrap:anywhere;
+      }
+
+      #exampleWrap{
+        padding:20px 18px;
       }
     }
 
     @media (max-width:560px){
-      body{ padding:14px; }
-      .hanzi{ font-size:64px; }
-      .ttsBar input[type="range"]{ width:190px; }
+      body{
+        padding:14px;
+      }
+
+      .hanzi{
+        font-size:64px;
+      }
+
+      .ttsBar input[type="range"]{
+        width:190px;
+      }
+
+      .exampleText{
+        font-size:20px;
+        line-height:1.75;
+      }
+
+      .korean{
+        font-size:18px;
+      }
+
+      .pinyin{
+        font-size:18px;
+      }
     }
   </style>
 </head>
@@ -378,12 +437,12 @@
       <div class="hanzi" id="hanzi">—</div>
 
       <div class="row">
-        <div class="pill">
+        <div class="pill" style="max-width:420px;">
           <div class="label">병음</div>
           <div class="pinyin" id="pinyin">—</div>
         </div>
 
-        <div class="pill">
+        <div class="pill" style="max-width:420px;">
           <div class="label">한국어</div>
           <div class="korean" id="korean">—</div>
         </div>
@@ -429,9 +488,9 @@
 <script>
   const $ = (id) => document.getElementById(id);
 
-  const INPUT_KEY = "vocab_cards_input_v4";
-  const TTS_KEY   = "vocab_cards_tts_v4";
-  const UI_KEY    = "vocab_cards_ui_v4";
+  const INPUT_KEY = "vocab_cards_input_v5";
+  const TTS_KEY   = "vocab_cards_tts_v5";
+  const UI_KEY    = "vocab_cards_ui_v5";
   const DEFAULT_CSV_FILE = "vocab.csv";
 
   let cards = [];
@@ -463,6 +522,7 @@
         current += ch;
       }
     }
+
     result.push(current.trim());
     return result;
   }
