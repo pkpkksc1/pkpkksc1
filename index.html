@@ -1,200 +1,807 @@
 <!doctype html>
 <html lang="ko">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>중국어 단어 카드</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>중국어 단어장 카드</title>
+  <style>
+    :root{
+      --bg1:#eef2ff;
+      --bg2:#fdf2f8;
+      --bg3:#ecfeff;
+      --card:rgba(255,255,255,.82);
+      --cardBorder:rgba(255,255,255,.55);
+      --text:#111827;
+      --muted:#6b7280;
+      --shadow:0 20px 60px rgba(15,23,42,.14);
+      --radius:28px;
 
-<style>
+      --accent:#ef4444;
 
-:root{
-  --bg:#4a6fb5;
-  --card:#ffffff;
-  --text:#111827;
-  --muted:#6b7280;
-  --shadow:0 12px 32px rgba(0,0,0,.12);
-  --radius:26px;
-  --accent:#ef4444;
-}
+      --btn:#111827;
+      --btnText:#ffffff;
+      --btn2:rgba(255,255,255,.78);
+      --btn2Text:#111827;
+      --danger:#ef4444;
+    }
 
-*{box-sizing:border-box}
+    *{ box-sizing:border-box; }
 
-body{
-  margin:0;
-  font-family:system-ui,-apple-system,Segoe UI,Roboto,"Noto Sans KR",sans-serif;
-  background:var(--bg);
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  min-height:100vh;
-  padding:24px;
-}
+    body{
+      margin:0;
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,"Noto Sans KR","Apple SD Gothic Neo",sans-serif;
+      min-height:100vh;
+      color:var(--text);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:24px;
+      position:relative;
+      overflow:hidden;
+      background:
+        radial-gradient(circle at 10% 15%, rgba(199,210,254,.95) 0%, transparent 28%),
+        radial-gradient(circle at 88% 18%, rgba(251,207,232,.95) 0%, transparent 25%),
+        radial-gradient(circle at 82% 86%, rgba(165,243,252,.95) 0%, transparent 24%),
+        radial-gradient(circle at 20% 85%, rgba(254,240,138,.55) 0%, transparent 20%),
+        linear-gradient(135deg, var(--bg1) 0%, var(--bg2) 45%, var(--bg3) 100%);
+    }
 
-.app{
-  width:min(900px,100%);
-  display:grid;
-  gap:18px;
-}
+    body::before,
+    body::after{
+      content:"";
+      position:absolute;
+      border-radius:999px;
+      filter:blur(24px);
+      opacity:.55;
+      pointer-events:none;
+      z-index:0;
+    }
 
-.card{
-  background:var(--card);
-  border-radius:var(--radius);
-  box-shadow:var(--shadow);
-  padding:40px;
-  display:grid;
-  gap:20px;
-}
+    body::before{
+      width:340px;
+      height:340px;
+      left:20px;
+      top:20px;
+      background:rgba(255,255,255,.35);
+    }
 
-.posLine{
-  text-align:center;
-  font-size:14px;
-  font-weight:700;
-  color:var(--muted);
-}
+    body::after{
+      width:360px;
+      height:360px;
+      right:20px;
+      bottom:10px;
+      background:rgba(255,255,255,.25);
+    }
 
-.hanzi{
-  text-align:center;
-  font-size:96px;
-  font-weight:900;
-}
+    .app{
+      width:min(1080px,100%);
+      display:grid;
+      gap:16px;
+      position:relative;
+      z-index:1;
+    }
 
-.row{
-  display:flex;
-  gap:14px;
-  justify-content:center;
-  flex-wrap:wrap;
-}
+    .topbar{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:12px;
+      flex-wrap:wrap;
+    }
 
-.pill{
-  border-radius:18px;
-  border:2px solid var(--accent);
-  padding:16px;
-  min-width:260px;
-}
+    .title{
+      font-size:18px;
+      font-weight:900;
+      letter-spacing:-.2px;
+    }
 
-.label{
-  font-size:12px;
-  font-weight:800;
-  color:var(--muted);
-  margin-bottom:4px;
-}
+    .meta{
+      color:var(--muted);
+      font-size:13px;
+      font-weight:700;
+      margin-top:4px;
+    }
 
-.pinyin{
-  font-size:20px;
-  font-weight:800;
-}
+    .rightBox{
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+      align-items:flex-end;
+      min-width:320px;
+    }
 
-.korean{
-  font-size:20px;
-  font-weight:900;
-}
+    .controls{
+      display:flex;
+      gap:10px;
+      justify-content:center;
+      flex-wrap:wrap;
+    }
 
-/* ⭐ 예문 크게 */
-.exampleText{
-  font-size:28px;
-  font-weight:800;
-  line-height:2;
-}
+    button{
+      border:0;
+      border-radius:16px;
+      padding:12px 16px;
+      font-weight:900;
+      cursor:pointer;
+      user-select:none;
+      transition:.18s ease;
+      box-shadow:0 10px 24px rgba(17,24,39,.08);
+    }
 
-/* ⭐ 예문 박스 크게 */
-#exampleWrap{
-  padding:28px;
-}
+    button:hover{ transform:translateY(-1px); }
+    button:active{ transform:translateY(0); }
 
-.controls{
-  display:flex;
-  gap:10px;
-  justify-content:center;
-}
+    .primary{
+      background:var(--btn);
+      color:var(--btnText);
+    }
 
-button{
-  border:none;
-  border-radius:14px;
-  padding:12px 16px;
-  font-weight:900;
-  cursor:pointer;
-}
+    .secondary{
+      background:var(--btn2);
+      color:var(--btn2Text);
+      backdrop-filter: blur(10px);
+    }
 
-.primary{background:#111827;color:white}
-.secondary{background:#e5e7eb}
+    .danger{
+      background:var(--danger);
+      color:white;
+    }
 
-</style>
+    .navBig{
+      padding:14px 20px;
+      border-radius:16px;
+      font-size:16px;
+      letter-spacing:.2px;
+    }
+
+    .ttsBar{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      justify-content:flex-end;
+      flex-wrap:wrap;
+      color:var(--muted);
+      font-size:12px;
+      font-weight:800;
+    }
+
+    .ttsBar input[type="range"]{
+      width:160px;
+      accent-color: var(--accent);
+    }
+
+    .pillMini{
+      background:rgba(255,255,255,.85);
+      border:1px solid rgba(255,255,255,.55);
+      border-radius:999px;
+      padding:6px 10px;
+      box-shadow:0 8px 18px rgba(0,0,0,.06);
+      backdrop-filter: blur(8px);
+    }
+
+    .card{
+      background:var(--card);
+      border:1px solid var(--cardBorder);
+      backdrop-filter: blur(14px);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      padding:38px;
+      display:grid;
+      gap:18px;
+      position:relative;
+      overflow:hidden;
+    }
+
+    .posLine{
+      text-align:center;
+      color:var(--muted);
+      font-size:14px;
+      font-weight:800;
+      margin-top:-4px;
+    }
+
+    .hanzi{
+      font-size:96px;
+      line-height:1.04;
+      text-align:center;
+      font-weight:900;
+      letter-spacing:1px;
+      padding:6px 10px;
+      color:#0f172a;
+    }
+
+    .row{
+      display:flex;
+      gap:12px;
+      justify-content:center;
+      align-items:stretch;
+      flex-wrap:wrap;
+      padding-top:4px;
+    }
+
+    .pill{
+      border-radius:20px;
+      padding:16px 18px;
+      background:rgba(255,255,255,.72);
+      border:2px solid rgba(239,68,68,.92);
+      min-width:250px;
+      max-width:100%;
+      box-shadow:0 10px 24px rgba(239,68,68,.08);
+    }
+
+    .label{
+      font-size:12px;
+      color:var(--muted);
+      margin-bottom:6px;
+      font-weight:900;
+      letter-spacing:.2px;
+    }
+
+    .pinyin{
+      font-style:normal;
+      color:#4b5563;
+      font-size:20px;
+      font-weight:800;
+      letter-spacing:.2px;
+    }
+
+    .korean{
+      font-size:21px;
+      font-weight:900;
+      color:#111827;
+    }
+
+    .exampleText{
+      font-size:28px;
+      line-height:2;
+      font-weight:800;
+      color:#111827;
+      white-space:pre-wrap;
+      word-break:keep-all;
+    }
+
+    #exampleWrap{
+      display:none;
+      padding:26px 24px;
+    }
+
+    .hiddenText{
+      filter: blur(9px);
+      user-select:none;
+    }
+
+    .panel{
+      background:rgba(255,255,255,.60);
+      border:1px solid rgba(255,255,255,.55);
+      border-radius:20px;
+      padding:14px;
+      box-shadow:0 10px 28px rgba(0,0,0,.06);
+      backdrop-filter: blur(10px);
+    }
+
+    textarea{
+      width:100%;
+      min-height:170px;
+      border-radius:14px;
+      border:1px solid #e5e7eb;
+      padding:12px;
+      font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono",monospace;
+      font-size:13px;
+      resize:vertical;
+      outline:none;
+      background:white;
+    }
+
+    .panelRow{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+      justify-content:space-between;
+      margin-bottom:10px;
+    }
+
+    .hint{
+      color:var(--muted);
+      font-size:13px;
+      margin-top:8px;
+      line-height:1.6;
+    }
+
+    .kbd{
+      font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;
+      background:#111827;
+      color:white;
+      border-radius:8px;
+      padding:2px 7px;
+      font-size:12px;
+    }
+
+    .footerHint{
+      text-align:center;
+      color:var(--muted);
+      font-size:12px;
+      font-weight:700;
+    }
+
+    @media (max-width:720px){
+      .rightBox{
+        align-items:flex-start;
+        min-width:unset;
+        width:100%;
+      }
+      .ttsBar{ justify-content:flex-start; }
+      .card{ padding:28px; }
+      .hanzi{ font-size:76px; }
+      .pill{ min-width:100%; }
+      .exampleText{
+        font-size:22px;
+        line-height:1.8;
+      }
+    }
+
+    @media (max-width:560px){
+      body{ padding:14px; }
+      .hanzi{ font-size:64px; }
+      .ttsBar input[type="range"]{ width:190px; }
+    }
+  </style>
 </head>
-
 <body>
+  <div class="app">
+    <div class="topbar">
+      <div>
+        <div class="title">중국어 단어장 카드</div>
+        <div class="meta" id="meta"></div>
+      </div>
 
-<div class="app">
+      <div class="rightBox">
+        <div class="controls">
+          <button class="secondary" id="toggleHide">뜻 가리기</button>
+          <button class="secondary" id="speak">🔊 듣기</button>
+          <button class="secondary" id="random">🎲 랜덤</button>
+          <button class="secondary navBig" id="prev">이전</button>
+          <button class="primary navBig" id="next">다음</button>
+        </div>
 
-<div class="controls">
-<button class="secondary" id="prev">이전</button>
-<button class="primary" id="next">다음</button>
-</div>
+        <div class="ttsBar">
+          <span class="pillMini">속도</span>
+          <input type="range" id="rate" min="0.6" max="1.2" step="0.05" value="0.9" />
+          <span class="pillMini" id="rateLabel">0.90×</span>
+          <span class="pillMini" id="voiceLabel">voice: auto</span>
+        </div>
+      </div>
+    </div>
 
-<div class="card">
+    <div class="card" aria-live="polite" id="card">
+      <div class="posLine" id="pos"></div>
+      <div class="hanzi" id="hanzi">—</div>
 
-<div class="posLine" id="pos"></div>
+      <div class="row">
+        <div class="pill">
+          <div class="label">병음</div>
+          <div class="pinyin" id="pinyin">—</div>
+        </div>
 
-<div class="hanzi" id="hanzi">—</div>
+        <div class="pill">
+          <div class="label">한국어</div>
+          <div class="korean" id="korean">—</div>
+        </div>
+      </div>
 
-<div class="row">
+      <div class="pill" id="exampleWrap">
+        <div class="label">예문</div>
+        <div class="exampleText" id="example">—</div>
+      </div>
+    </div>
 
-<div class="pill">
-<div class="label">병음</div>
-<div class="pinyin" id="pinyin">—</div>
-</div>
+    <div class="panel">
+      <div class="panelRow">
+        <div style="font-weight:900;">데이터 붙여넣기</div>
+        <div class="controls">
+          <button class="secondary" id="reloadCsv">📥 CSV 새로고침</button>
+          <button class="primary" id="load">불러오기</button>
+          <button class="danger" id="clear">초기화</button>
+        </div>
+      </div>
 
-<div class="pill">
-<div class="label">한국어</div>
-<div class="korean" id="korean">—</div>
-</div>
+      <textarea id="input" placeholder="쉼표(CSV) 또는 공백 형식 그대로 붙여넣기
+예)
+地铁,dìtiě,지하철/전철,명사
+复习,Fùxí,복습하다,동사,为了提高汉语水平，我每天晚上都会复习。"></textarea>
 
-</div>
+      <div class="hint">
+        지원 형식<br/>
+        1) <b>한자,병음,한국어,품사(선택),예문(선택)</b><br/>
+        2) <b>한자 병음 한국어 품사</b> (공백 구분)<br/>
+        단축키:
+        <span class="kbd">←</span> 이전 /
+        <span class="kbd">→</span> 다음 /
+        <span class="kbd">R</span> 랜덤 /
+        <span class="kbd">H</span> 뜻 가리기 /
+        <span class="kbd">S</span> 듣기
+      </div>
+    </div>
 
-<div class="pill" id="exampleWrap">
-
-<div class="label">예문</div>
-
-<div class="exampleText" id="example">—</div>
-
-</div>
-
-</div>
-
-</div>
+    <div class="footerHint">※ 입력칸/설정은 이 브라우저에 자동 저장돼. (localStorage)</div>
+  </div>
 
 <script>
+  const $ = (id) => document.getElementById(id);
 
-const data = [
-{hanzi:"条件",pinyin:"tiáojiàn",korean:"조건/환경",pos:"명사",example:"最近我常常跟朋友讨论条件这个话题。"},
-{hanzi:"复习",pinyin:"fùxí",korean:"복습하다",pos:"동사",example:"为了提高汉语水平，我每天晚上都会复习。"},
-{hanzi:"努力",pinyin:"nǔlì",korean:"노력하다",pos:"동사",example:"只要努力学习，汉语水平一定会提高。"}
-]
+  const INPUT_KEY = "vocab_cards_input_v4";
+  const TTS_KEY   = "vocab_cards_tts_v4";
+  const UI_KEY    = "vocab_cards_ui_v4";
+  const DEFAULT_CSV_FILE = "vocab.csv";
 
-let i=0
+  let cards = [];
+  let idx = 0;
+  let hideMeaning = false;
 
-function render(){
-const c=data[i]
+  let ttsRate = 0.9;
+  let chosenVoiceName = "auto";
 
-document.getElementById("hanzi").textContent=c.hanzi
-document.getElementById("pinyin").textContent=c.pinyin
-document.getElementById("korean").textContent=c.korean
-document.getElementById("example").textContent=c.example
-document.getElementById("pos").textContent=c.pos
-}
+  function parseCsvLine(line) {
+    const result = [];
+    let current = "";
+    let inQuotes = false;
 
-document.getElementById("next").onclick=()=>{
-i=(i+1)%data.length
-render()
-}
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
 
-document.getElementById("prev").onclick=()=>{
-i=(i-1+data.length)%data.length
-render()
-}
+      if (ch === '"') {
+        if (inQuotes && line[i + 1] === '"') {
+          current += '"';
+          i++;
+        } else {
+          inQuotes = !inQuotes;
+        }
+      } else if (ch === "," && !inQuotes) {
+        result.push(current.trim());
+        current = "";
+      } else {
+        current += ch;
+      }
+    }
+    result.push(current.trim());
+    return result;
+  }
 
-render()
+  function parseLines(text) {
+    const lines = text
+      .split(/\r?\n/)
+      .map(l => l.trim())
+      .filter(Boolean);
 
+    const parsed = [];
+
+    for (const line of lines) {
+      if (line.includes(",")) {
+        const parts = parseCsvLine(line);
+        if (parts.length < 3) continue;
+
+        const hanzi   = parts[0] || "";
+        const pinyin  = parts[1] || "";
+        const korean  = parts[2] || "";
+        const pos     = parts[3] || "";
+        const example = parts.slice(4).join(",").trim();
+
+        if (!hanzi || !pinyin || !korean) continue;
+        parsed.push({ hanzi, pinyin, korean, pos, example });
+        continue;
+      }
+
+      const tokens = line.split(/\s+/);
+      if (tokens.length < 3) continue;
+
+      const hanzi = tokens[0];
+
+      let firstKoIdx = -1;
+      for (let i = 1; i < tokens.length; i++) {
+        if (/[가-힣]/.test(tokens[i])) {
+          firstKoIdx = i;
+          break;
+        }
+      }
+      if (firstKoIdx === -1) continue;
+
+      const maybePos = tokens[tokens.length - 1];
+      const hasPos = /명사|동사|형용사|부사|대명사|수사|조사|관형사|감탄사|구어|표현|문법/i.test(maybePos);
+
+      const pinyin = tokens.slice(1, firstKoIdx).join(" ");
+      const korean = tokens.slice(firstKoIdx, hasPos ? tokens.length - 1 : tokens.length).join(" ");
+      const pos = hasPos ? maybePos : "";
+
+      if (!hanzi || !pinyin || !korean) continue;
+      parsed.push({ hanzi, pinyin, korean, pos, example: "" });
+    }
+
+    return parsed;
+  }
+
+  function saveUI() {
+    localStorage.setItem(INPUT_KEY, $("input").value);
+    localStorage.setItem(TTS_KEY, JSON.stringify({ ttsRate, chosenVoiceName }));
+    localStorage.setItem(UI_KEY, JSON.stringify({ idx, hideMeaning }));
+  }
+
+  function loadSavedUI() {
+    const savedText = localStorage.getItem(INPUT_KEY);
+    if (savedText !== null) $("input").value = savedText;
+
+    const savedTTS = localStorage.getItem(TTS_KEY);
+    if (savedTTS) {
+      try {
+        const t = JSON.parse(savedTTS);
+        if (typeof t.ttsRate === "number") ttsRate = t.ttsRate;
+        if (typeof t.chosenVoiceName === "string") chosenVoiceName = t.chosenVoiceName;
+      } catch(e) {}
+    }
+
+    const savedUI = localStorage.getItem(UI_KEY);
+    if (savedUI) {
+      try {
+        const u = JSON.parse(savedUI);
+        if (Number.isFinite(u.idx)) idx = u.idx;
+        if (typeof u.hideMeaning === "boolean") hideMeaning = u.hideMeaning;
+      } catch(e) {}
+    }
+  }
+
+  function clampIndex() {
+    if (cards.length === 0) {
+      idx = 0;
+      return;
+    }
+    if (idx < 0) idx = 0;
+    if (idx >= cards.length) idx = cards.length - 1;
+  }
+
+  function render(metaPrefix = "") {
+    clampIndex();
+
+    if (cards.length === 0) {
+      $("hanzi").textContent = "데이터 없음";
+      $("pinyin").textContent = "—";
+      $("korean").textContent = "—";
+      $("example").textContent = "—";
+      $("exampleWrap").style.display = "none";
+      $("pos").textContent = "";
+      $("meta").textContent = metaPrefix || "vocab.csv 자동 로드 중… 또는 아래에 데이터를 넣고 ‘불러오기’를 눌러줘!";
+      return;
+    }
+
+    const c = cards[idx];
+
+    $("hanzi").textContent = c.hanzi || "—";
+    $("pinyin").textContent = c.pinyin || "—";
+    $("pos").textContent = c.pos ? c.pos : "";
+
+    const ko = $("korean");
+    ko.textContent = c.korean || "—";
+    ko.classList.toggle("hiddenText", hideMeaning);
+
+    const ex = $("example");
+    const exWrap = $("exampleWrap");
+    ex.textContent = c.example || "—";
+    ex.classList.toggle("hiddenText", hideMeaning);
+    exWrap.style.display = c.example ? "block" : "none";
+
+    $("meta").textContent = `${metaPrefix}${idx + 1} / ${cards.length}` + (c.pos ? ` · ${c.pos}` : "");
+  }
+
+  function next() {
+    if (cards.length === 0) return;
+    idx = (idx + 1) % cards.length;
+    render("CSV · ");
+    saveUI();
+  }
+
+  function prev() {
+    if (cards.length === 0) return;
+    idx = (idx - 1 + cards.length) % cards.length;
+    render("CSV · ");
+    saveUI();
+  }
+
+  function randomPick() {
+    if (cards.length === 0) return;
+    if (cards.length === 1) {
+      idx = 0;
+      render("CSV · ");
+      saveUI();
+      return;
+    }
+    let r;
+    do {
+      r = Math.floor(Math.random() * cards.length);
+    } while (r === idx);
+    idx = r;
+    render("CSV · ");
+    saveUI();
+  }
+
+  function getPreferredVoice() {
+    if (!("speechSynthesis" in window)) return null;
+    const voices = window.speechSynthesis.getVoices() || [];
+    if (voices.length === 0) return null;
+
+    if (chosenVoiceName && chosenVoiceName !== "auto") {
+      const exact = voices.find(v => v.name === chosenVoiceName);
+      if (exact) return exact;
+    }
+
+    const zh = voices.find(v =>
+      (v.lang && v.lang.toLowerCase().startsWith("zh")) ||
+      (v.name && /chinese|mandarin|zh/i.test(v.name))
+    );
+
+    return zh || voices[0];
+  }
+
+  function refreshVoiceLabel() {
+    const v = getPreferredVoice();
+    $("voiceLabel").textContent = v ? `voice: ${v.lang || "?"}` : "voice: loading...";
+  }
+
+  function speakChinese(text) {
+    if (!("speechSynthesis" in window)) {
+      alert("이 브라우저는 음성 기능을 지원하지 않아 ㅠㅠ");
+      return;
+    }
+    if (!text || text === "—" || text === "데이터 없음") return;
+
+    window.speechSynthesis.cancel();
+
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = "zh-CN";
+    u.rate = ttsRate;
+    u.pitch = 1.0;
+
+    const v = getPreferredVoice();
+    if (v) u.voice = v;
+
+    window.speechSynthesis.speak(u);
+  }
+
+  function speakCurrent() {
+    if (cards.length === 0) return;
+    speakChinese(cards[idx].hanzi);
+  }
+
+  async function loadFromCsv({ keepIndex = true } = {}) {
+    const oldHanzi = (cards[idx] && cards[idx].hanzi) ? cards[idx].hanzi : null;
+
+    try {
+      render("CSV 로드 중… · ");
+      const res = await fetch(`${DEFAULT_CSV_FILE}?v=${Date.now()}`, { cache: "no-store" });
+      if (!res.ok) throw new Error(`fetch failed: ${res.status}`);
+
+      const text = await res.text();
+      const parsed = parseLines(text);
+
+      if (parsed.length === 0) {
+        cards = [];
+        idx = 0;
+        render("CSV 파싱 실패 · ");
+        return;
+      }
+
+      cards = parsed;
+
+      if (keepIndex && oldHanzi) {
+        const found = cards.findIndex(x => x.hanzi === oldHanzi);
+        idx = found >= 0 ? found : Math.min(idx, cards.length - 1);
+      } else {
+        idx = 0;
+      }
+
+      render("CSV · ");
+      saveUI();
+    } catch (e) {
+      console.warn("CSV load 실패:", e);
+      cards = [];
+      idx = 0;
+      render("CSV 불러오기 실패 · ");
+    }
+  }
+
+  $("next").addEventListener("click", next);
+  $("prev").addEventListener("click", prev);
+  $("random").addEventListener("click", randomPick);
+
+  $("toggleHide").addEventListener("click", () => {
+    hideMeaning = !hideMeaning;
+    $("toggleHide").textContent = hideMeaning ? "뜻 보이기" : "뜻 가리기";
+    render("CSV · ");
+    saveUI();
+  });
+
+  $("speak").addEventListener("click", speakCurrent);
+  $("card").addEventListener("click", (e) => {
+    if (e.target.tagName === "BUTTON") return;
+    speakCurrent();
+  });
+
+  const rateEl = $("rate");
+  const rateLabel = $("rateLabel");
+
+  function setRate(val) {
+    ttsRate = Number(val);
+    rateEl.value = String(ttsRate);
+    rateLabel.textContent = `${ttsRate.toFixed(2)}×`;
+    saveUI();
+  }
+
+  rateEl.addEventListener("input", (e) => setRate(e.target.value));
+
+  $("load").addEventListener("click", () => {
+    const text = $("input").value.trim();
+    const parsed = parseLines(text);
+
+    if (parsed.length === 0) {
+      alert("형식이 안 맞아! 최소 (한자,병음,한국어) 또는 (한자 병음 한국어) 형태여야 해.");
+      return;
+    }
+
+    cards = parsed;
+    idx = 0;
+    render("입력 · ");
+    saveUI();
+  });
+
+  $("reloadCsv").addEventListener("click", () => {
+    loadFromCsv({ keepIndex: true });
+  });
+
+  $("clear").addEventListener("click", () => {
+    if (!confirm("입력칸/설정 저장도 같이 지울까?")) return;
+
+    cards = [];
+    idx = 0;
+    hideMeaning = false;
+
+    localStorage.removeItem(INPUT_KEY);
+    localStorage.removeItem(TTS_KEY);
+    localStorage.removeItem(UI_KEY);
+
+    $("input").value = "";
+    $("toggleHide").textContent = "뜻 가리기";
+    chosenVoiceName = "auto";
+    setRate(0.9);
+
+    render();
+    refreshVoiceLabel();
+    loadFromCsv({ keepIndex:false });
+  });
+
+  $("input").addEventListener("input", () => {
+    localStorage.setItem(INPUT_KEY, $("input").value);
+  });
+
+  window.addEventListener("keydown", (e) => {
+    if (e.target && (e.target.tagName === "TEXTAREA" || e.target.tagName === "INPUT")) return;
+
+    if (e.key === "ArrowRight") next();
+    if (e.key === "ArrowLeft") prev();
+    if (e.key.toLowerCase() === "r") randomPick();
+    if (e.key.toLowerCase() === "h") $("toggleHide").click();
+    if (e.key.toLowerCase() === "s") speakCurrent();
+  });
+
+  if ("speechSynthesis" in window) {
+    window.speechSynthesis.onvoiceschanged = () => refreshVoiceLabel();
+  }
+
+  loadSavedUI();
+  $("toggleHide").textContent = hideMeaning ? "뜻 보이기" : "뜻 가리기";
+  setRate(ttsRate);
+  render();
+
+  setTimeout(refreshVoiceLabel, 250);
+  setTimeout(refreshVoiceLabel, 1000);
+
+  loadFromCsv({ keepIndex: true });
 </script>
-
 </body>
 </html>
